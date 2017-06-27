@@ -1,3 +1,9 @@
+Jun 2017
+
+This is an (older) snapshot of the mutator project for posterity. Up-to-date versions are [here](https://github.com/bloodstalker/mutator).
+
+--------
+
 # mutator
 
 [![Build Status](https://travis-ci.org/bloodstalker/mutator.svg?branch=master)](https://travis-ci.org/bloodstalker/mutator)
