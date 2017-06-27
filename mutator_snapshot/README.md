@@ -1,6 +1,6 @@
 Jun 2017
 
-This is an (older) snapshot of the mutator project for posterity. Up-to-date versions are [here](https://github.com/bloodstalker/mutator).
+This is an (older) snapshot of the mutator project for posterity. Up-to-date versions are [here](https://github.com/bloodstalker/mutator). The corresponding version of llvm (and the libTooling library) used to build this version of mutator is [here](https://github.com/duneroadrunner/llvm_snapshot/tree/master).
 
 --------
 
