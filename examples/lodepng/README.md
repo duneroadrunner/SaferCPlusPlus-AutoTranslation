@@ -26,4 +26,4 @@ So after converting the next source file, lodepng.cpp, in the same manner as we 
 
 So we make one more copy of the original project source. For each file that was modified we do a 3-way merge (using meld, or your favorite merge tool), saving the result in this last copy of the project. It turns out that the only file that's modified by both conversions is the lodepng.h file, so the other modified files don't even require a merge.
 
-Since lodepng_util.cpp and lodepng.cpp are the only (non-header) source files of interest to us, we're done. This copy of the project with the merged modifications should compile and run. And, in theory, be safer as all the arrays have been replaced with memory-safe substitutes.
+Since lodepng_util.cpp and lodepng.cpp are the only (non-header) source files of interest to us, we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This copy of the project with the merged modifications should compile and run. And, in theory, be safer as all the arrays have been replaced with memory-safe substitutes.
