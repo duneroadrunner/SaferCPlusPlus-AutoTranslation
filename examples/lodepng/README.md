@@ -16,7 +16,7 @@ So, from the source directory of the new copy of the project, we first convert t
 
     {mutator_executable_directory}/safercpp-arr lodepng_util.cpp -- -I'/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include' -I'/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include-fixed'
 
-This command results in three files being modified - lodepng_util.cpp and the header files it includes, lodepng_util.h and lodepng.h. All modified files should have the following #include directive inserted somewhere (near the beginning) of file
+This command results in three files being modified - lodepng_util.cpp and the header files it includes, lodepng_util.h and lodepng.h. All modified files should have the following #include directive inserted somewhere in (and near the beginning of) the file
 
     #include "mselegacyhelpers.h"
 
