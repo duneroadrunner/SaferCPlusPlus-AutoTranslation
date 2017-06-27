@@ -1,3 +1,5 @@
+Jun 2017
+
 This subdirectory contains versions of [LodePNG](https://github.com/lvandeve/lodepng), an open source png encoder/decoder, before and after (partial) conversion from C to [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus). The conversion was done using the "safercpp-arr" tool that's part of the [mutator](https://github.com/bloodstalker/mutator) code analysis project. This conversion assistance tool is still in early development, and at the moment only converts native arrays and pointers used as array iterators to their SaferCPlusPlus counterparts.
 
 Note that this tool uses the "clang libTooling" library and has only been tested on linux (as far as I know).
