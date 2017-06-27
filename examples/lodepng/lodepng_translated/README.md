@@ -1,3 +1,9 @@
+Jun 2017
+
+This is a version of the [LodePNG](https://github.com/lvandeve/lodepng) png encoder/decoder that has been (partially) converted to [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) as part of a demonstration of the SaferCPlusPlus [conversion assistance tool](https://github.com/duneroadrunner/SaferCPlusPlus-AutoTranslation).
+
+--------
+
 LodePNG
 -------
 
