@@ -4,6 +4,7 @@ Red="\033[0;31m"
 Green="\033[0;32m"
 Lblue="\033[1;34m"
 Orange="\033[0;33m"
+Magenta="\033[1;35m"
 NC="\033[0m"
 
 REP_FILE="test/precommit.rep"
@@ -15,21 +16,21 @@ function RelicKeeper
 {
   cd ./reliquary/bruiser
   RELIC_CNT=$(ls | gawk 'END{print NR}')
-  if (( $RELIC_CNT > 10 )); then
+  if (( $RELIC_CNT > $RELIC_COUNT )); then
     rm "$(ls -t | tail -1)"
     printf "${Orange}RelicKeeper removed the oldest bruiser relic.\n${NC}" | tee -a ../../test/precommit.rep
   fi
 
   cd ../m0
   RELIC_CNT=$(ls | gawk 'END{print NR}')
-  if (( $RELIC_CNT > 10 )); then
+  if (( $RELIC_CNT > $RELIC_COUNT )); then
     rm "$(ls -t | tail -1)"
     printf "${Orange}RelicKeeper removed the oldest m0 relic.\n${NC}" | tee -a ../../test/precommit.rep
   fi
 
   cd ../safercpp
   RELIC_CNT=$(ls | gawk 'END{print NR}')
-  if (( $RELIC_CNT > 10 )); then
+  if (( $RELIC_CNT > $RELIC_COUNT )); then
     rm "$(ls -t | tail -1)"
     printf "${Orange}RelicKeeper removed the oldest safercpp relic.\n${NC}" | tee -a ../../test/precommit.rep
   fi
@@ -70,7 +71,16 @@ printf "${Lblue}running c++11 mutator-lvl0 xml report schema test...\n${NC}" | t
 if [[ $? == 0 ]];then
   printf "${Green}c++11 mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
 else
-  printf "${Red}c++11 mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+  printf "${Red}c++11 mutator-lvl0 xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
+fi
+
+printf "${Magenta}running c++11 mutagen xml report schema test...\n${NC}" | tee -a ./test/precommit.rep
+"xmllint" --noout --schema ./samples/m0.xsd ./m0.xml
+
+if [[ $? == 0 ]];then
+  printf "${Green}c++11 mutagen xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}c++11 mutagen xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
 fi
 
 printf "${Lblue}running smoke tests on mutator-lvl0...\n${NC}" | tee -a ./test/precommit.rep
@@ -83,9 +93,25 @@ else
   printf "${Red}mutator-lvl0 C++11 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
 fi
 
+printf "${Lblue}running bruiser smoke tests...\n${NC}" | tee -a ./test/precommit.rep
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++11 smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++11 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++11 smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++11 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+
 printf "${Lblue}running make clean...\n${NC}" | tee -a ./test/precommit.rep
 "make" clean
-
+########################################################################################################################
 printf "${Lblue}testing the build in C++1z mode...\n${NC}" | tee -a ./test/precommit.rep
 "make" CXX=clang++ BUILD_MODE=COV_NO_CLANG_1Z -j2
 echo ""
@@ -119,7 +145,16 @@ printf "${Lblue}running c++1z mutator-lvl0 xml report schema test...\n${NC}" | t
 if [[ $? == 0 ]];then
   printf "${Green}c++1z mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
 else
-  printf "${Red}c++1z mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+  printf "${Red}c++1z mutator-lvl0 xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
+fi
+
+printf "${Magenta}running c++1z mutagen xml report schema test...\n${NC}" | tee -a ./test/precommit.rep
+"xmllint" --noout --schema ./samples/m0.xsd ./m0.xml
+
+if [[ $? == 0 ]];then
+  printf "${Green}c++1z mutagen xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}c++1z mutagen xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
 fi
 
 printf "${Lblue}running smoke tests on mutator-lvl0...\n${NC}" | tee -a ./test/precommit.rep
@@ -132,12 +167,28 @@ else
   printf "${Red}mutator-lvl0 C++1z smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
 fi
 
+printf "${Lblue}running bruiser smoke tests...\n${NC}" | tee -a ./test/precommit.rep
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++1z smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++1z smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++1z smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++1z smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+
 printf "${Lblue}cleaning the objects and exexutables...\n${NC}" | tee -a ./test/precommit.rep
 "make" clean
 
 printf "${Lblue}running make clean...\n${NC}" | tee -a ./test/precommit.rep
 "make" clean
-
+########################################################################################################################
 printf "${Lblue}testing the build in C++14 mode...\n${NC}" | tee -a ./test/precommit.rep
 "make" CXX=clang++ BUILD_MODE=COV_NO_CLANG_14 -j2
 echo ""
@@ -164,7 +215,16 @@ printf "${Lblue}running c++14 mutator-lvl0 xml report schema test...\n${NC}" | t
 if [[ $? == 0 ]];then
   printf "${Green}c++14 mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
 else
-  printf "${Red}c++14 mutator-lvl0 xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+  printf "${Red}c++14 mutator-lvl0 xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
+fi
+
+printf "${Magenta}running c++14 mutagen xml report schema test...\n${NC}" | tee -a ./test/precommit.rep
+"xmllint" --noout --schema ./samples/m0.xsd ./m0.xml
+
+if [[ $? == 0 ]];then
+  printf "${Green}c++14 mutagen xml report xsd passed.\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}c++14 mutagen xml report xsd failed.\n${NC}" | tee -a ./test/precommit.rep
 fi
 
 printf "${Lblue}running smoke tests on mutator-lvl0...\n${NC}" | tee -a ./test/precommit.rep
@@ -177,9 +237,25 @@ else
   printf "${Red}mutator-lvl0 C++14 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
 fi
 
+printf "${Lblue}running bruiser smoke tests...\n${NC}" | tee -a ./test/precommit.rep
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre1.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++14 smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++14 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+printf "${Orange}./bruiser/bruiser ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua\n${NC}" | tee -a ./test/precommit.rep
+"./bruiser/bruiser" ./test/bruisertest/test.cpp -lua ./bruiser/lua-scripts/pre2.lua
+if [[ $? == 0 ]]; then
+  printf "${Green}bruiser C++14 smoke test passed...\n${NC}" | tee -a ./test/precommit.rep
+else
+  printf "${Red}bruiser C++14 smoke test failed...\n${NC}" | tee -a ./test/precommit.rep
+fi
+
 printf "${Lblue}cleaning the objects and exexutables...\n${NC}" | tee -a ./test/precommit.rep
 "make" clean
-
+########################################################################################################################
 cd daemon
 printf "${Lblue}changing to the daemon directory\n${NC}" | tee -a ../test/precommit.rep
 

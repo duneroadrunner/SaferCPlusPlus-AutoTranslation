@@ -1,9 +1,3 @@
-Jun 2017
-
-This is an (older) snapshot of the mutator project for posterity. Up-to-date versions are [here](https://github.com/bloodstalker/mutator). The corresponding version of llvm (and the libTooling library) used to build this version of mutator is [here](https://github.com/duneroadrunner/llvm_snapshot/tree/master).
-
---------
-
 # mutator
 
 [![Build Status](https://travis-ci.org/bloodstalker/mutator.svg?branch=master)](https://travis-ci.org/bloodstalker/mutator)
@@ -13,7 +7,6 @@ This is an (older) snapshot of the mutator project for posterity. Up-to-date ver
 </a>
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/553/badge)](https://bestpractices.coreinfrastructure.org/projects/553)
 [![Coverage Status](https://coveralls.io/repos/github/bloodstalker/mutator/badge.svg?branch=master)](https://coveralls.io/github/bloodstalker/mutator?branch=master)
-<a href="https://twitter.com/xashmith" class="twitter-follow-button" data-show-count="false">Follow @xashmith</a><script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 
 Here's the elevator pitch: mutator is a suite of tools aimed at analysis and automation of C/C++ code development.<br/>
@@ -101,11 +94,9 @@ All the as-of-yet implemented features of the project are very much buildable an
 * project mutator has changed licenses from LGPLv3 to GPLv2.<br/>
 * `mutator-lvl0` has reached a release candidate. I will branch a release candidate for it and then we can start the unit tests.<br/>
 * The Implementation of the automatic refactoring facilities of `mutator` has begun. The UI is not yet capable of accomodating the current features so I'll try to add them as soon as possible.<br/>
-* LLVM has bumped to 5.0 so mutator has also changed to using that(trunk:292415). Everything is in working order.<br/>
 * The Travis build is now using 4.0 for build checks. LLVM 3.9 is still supported minus rule check 8.8 which uses a non-existant matcher in 3.9.<br/> 
 * There are no plans in regards to keeping or dropping LLVM 3.9 support but do keep in mind the libraries mutator uses are not guaranteed to keep backwards-compatibility by their developers as they are still under development.<br/>
 * There are only 4 actual defects on mutator's Coverity scan that belong to mutator's source code and not the library. 4 are potential defects which are not really defects.<br/>
-* I will be taking a break of sorts for the next two weeks (probably less but still) starting from 1.25.2017.<br/>
 
 ## Building and Running
 
@@ -123,7 +114,7 @@ git submodule update
 
 ```
 
-To build the project, you need to have the LLVM libraries 4.0 or higher. mutator can not be built with LLVM 3.9 or lower. The latest tested is LLVM trunk:301395.<br/>
+To build the project, you need to have the LLVM libraries 4.0 or higher. mutator can not be built with LLVM 3.9 or lower. The latest tested is LLVM trunk:307814.<br/>
 Here Are the build options:<br/>
 
 * Running `make` will build the default target which is `all`. This will build all three executables, without support for coverage instrumentation.<br/>
@@ -275,7 +266,7 @@ You can run the sample action file with this:<br/>
 
 Currently, the mutation-only features(mutation for the sake of mutation, technically implementing Misra-C is also a form of mutation) are turned off in **mutator** and **mutator-lvl2** though some automatic code refactoring features work in both executables. Just run a sample code through **mutator** and then **mutator-lvl2** for a demo.<br/>
 <br/>
-If your code needs a compilation database for clang to understand it and you don't have one,you can use [Bear](https://github.com/rizsotto/Bear). Please note that bear will capture what the make runs, not what is in the makefile. So run `make clean` before invoking `bear make target`.<br/>
+If your code needs a compilation database for clang to understand it and you don't have one,you can use [Bear](https://github.com/rizsotto/Bear). Please note that bear will capture what the make runs, not what is in the makefile. So run `make clean` before invoking `bear make target`. `cmake` can also generate compilation databases if you are using it.<br/>
 
 ### Implementation Notes
 This part contains notes regarding the implementation of the mutator executables.
@@ -352,3 +343,4 @@ If the company/organization you represent wants to sponsor mutator, let me know.
 
 ### Contact
 You can email me at thabogre@gmail.com, there is also the twitter account for the mutator project, @xashmith and there is the mutator maillist, mutator-repost@freelists.org. You need to be a member though to be able to send mail on the maillist. The maillist is moderated.<br/>
+<a href="https://twitter.com/xashmith" class="twitter-follow-button" data-show-count="false">Follow @xashmith</a><script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>

@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.*
 #include "CompletionHints.h"
 #include "../mutator_aux.h"
 #include "mutagen.h"
+#include "ORCmutation.h"
 /*standard headers*/
 #include <fstream>
 #include <string>
@@ -74,7 +75,7 @@ namespace
   static llvm::cl::OptionCategory BruiserCategory("Empty");
   std::vector<std::string> PushToLua;
 
-  bruiser::M0_ERR m0_err;
+  bruiser::M0_ERR m0_err [[maybe_unused]];
   bruiser::BruiserReport BruiseRep;
 
   struct ShellGlobal
@@ -84,6 +85,7 @@ namespace
     std::vector<std::string> PATH;
     std::vector<std::string> SOURCE_FILES;
     std::string MAKEPATH;
+    std::string BINPATH;
   };
 
   struct ShellCache
@@ -99,16 +101,17 @@ namespace
 cl::opt<bool> Intrusive("intrusive", cl::desc("If set true. bruiser will mutate the source."), cl::init(true), cl::cat(BruiserCategory), cl::ZeroOrMore);
 cl::opt<std::string> M0XMLPath("xmlpath", cl::desc("tells bruiser where to find the XML file containing the Mutator-LVL0 report."), cl::init(bruiser::M0REP), cl::cat(BruiserCategory), cl::ZeroOrMore);
 cl::opt<bool> LuaJIT("jit", cl::desc("should bruiser use luajit or not."), cl::init(true), cl::cat(BruiserCategory), cl::ZeroOrMore);
+cl::opt<std::string> NonCLILuaScript("lua", cl::desc("specifies a lua script for bruiser to run in non-interactive mode"), cl::init(""), cl::cat(BruiserCategory), cl::Optional);
 /**********************************************************************************************************************/
 class LuaEngine
 {
   public:
-    LuaEngine() 
+    LuaEngine()
     {
       LS = luaL_newstate();
     }
 
-    /*@DEVI-this will just create member functions that open a single lua libarary. 
+    /*@DEVI-this will just create member functions that open a single lua libarary.
      * For example to load the string library just call LuaEngine::LoadstringLib().*/
 #define OPEN_LUA_LIBS(__x1) \
       void Load##__x1##Lib(void){\
@@ -248,12 +251,12 @@ class CompilationDatabaseProcessor
 };
 /**********************************************************************************************************************/
 /*the implementation of the bruiser logger.*/
-bruiser::BruiserReport::BruiserReport () 
+bruiser::BruiserReport::BruiserReport ()
 {
   BruiserLog.open("bruiser.log");
 }
 
-bruiser::BruiserReport::~BruiserReport() 
+bruiser::BruiserReport::~BruiserReport()
 {
   BruiserLog.close();
 }
@@ -320,7 +323,7 @@ class AbstractMatcherHandler : public virtual MatchFinder::MatchCallback
     }
 
   private:
-    Rewriter &R;
+    Rewriter &R [[maybe_unused]];
 };
 /**********************************************************************************************************************/
 class MatcherHandlerLVL0 : public AbstractMatcherHandler
@@ -384,7 +387,7 @@ class NameFinder
 /**********************************************************************************************************************/
 /**********************************************************************************************************************/
 /**********************************************************************************************************************/
-class IfBreaker : public MatchFinder::MatchCallback 
+class IfBreaker : public MatchFinder::MatchCallback
 {
   public:
     IfBreaker (Rewriter &Rewrite) : Rewrite(Rewrite) {}
@@ -462,7 +465,7 @@ public:
 
       SourceRange SR(SL, SLE);
 
-      std::string MainSig = Rewrite.getRewrittenText(SR); 
+      std::string MainSig = Rewrite.getRewrittenText(SR);
 
       size_t mainbegin = MainSig.find("main");
 
@@ -570,7 +573,7 @@ public:
   BruiserASTConsumer(Rewriter &R) : HIfBreaker(R), HMainWrapper(R)
   {}
 
-  void HandleTranslationUnit(ASTContext &Context) override 
+  void HandleTranslationUnit(ASTContext &Context) override
   {
     Matcher.addMatcher(ifStmt(hasDescendant(expr(anyOf(unaryOperator().bind("uno"), binaryOperator().bind("dous"))))), &HIfBreaker);
 
@@ -744,7 +747,7 @@ class BlankDiagConsumer : public clang::DiagnosticConsumer
     virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) override {}
 };
 /**********************************************************************************************************************/
-class BruiserFrontendAction : public ASTFrontendAction 
+class BruiserFrontendAction : public ASTFrontendAction
 {
 public:
   BruiserFrontendAction() {}
@@ -763,7 +766,7 @@ public:
     TheRewriter.getEditBuffer(TheRewriter.getSourceMgr().getMainFileID()).write(*tee);
   }
 
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override 
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override
   {
     DiagnosticsEngine &DE = CI.getPreprocessor().getDiagnostics();
     DE.setClient(BDCProto, false);
@@ -1149,7 +1152,7 @@ class LuaWrapper
         PRINT_WITH_COLOR_LB(RED, "function was not called by one argument. Run help().");
         return 0;
       }
-      
+
       unsigned int historysize = lua_tonumber(__ls, 1);
 
       linenoiseHistorySetMaxLen(historysize);
@@ -1245,7 +1248,7 @@ class LuaWrapper
         returned =  waitpid(pid, &status, 0);
         lua_pushnumber(__ls, returned);
       }
-      
+
       return 1;
     }
 
@@ -1269,6 +1272,167 @@ class LuaWrapper
       ShellGlobalInstance.MAKEPATH = lua_tostring(__ls, 1);
 
       return 0;
+    }
+
+    int BruiserLuaRun(lua_State* __ls)
+    {
+      int numargs = lua_gettop(__ls);
+
+      if (numargs != 1)
+      {
+        PRINT_WITH_COLOR_LB(RED, "wrong number of args. run help().");
+        lua_pushnumber(__ls, 1);
+        return 1;
+      }
+
+      if (ShellGlobalInstance.BINPATH == "")
+      {
+        PRINT_WITH_COLOR_LB(RED, "BINPATH is not set. use setbinpath() to set it.");
+        lua_pushnumber(__ls, 1);
+        return 1;
+      }
+
+      std::string binname = lua_tostring(__ls, 1);
+
+      pid_t pid = fork();
+
+      if (pid < 0)
+      {
+        PRINT_WITH_COLOR_LB(RED, "could not fork...");
+        lua_pushnumber(__ls, 1);
+        return 1;
+      }
+
+      if (pid == 0)
+      {
+        int retval = execl((ShellGlobalInstance.BINPATH + "/" + binname).c_str(), binname.c_str(), NULL);
+        std::cout << BLUE << "child returned " << retval << NORMAL << "\n";
+        lua_pushnumber(__ls, retval);
+        exit(EXIT_SUCCESS);
+      }
+
+      if (pid > 0)
+      {
+        unsigned int current_time [[maybe_unused]] = 0U;
+
+        while (current_time < GLOBAL_TIME_OUT)
+        {
+          int status;
+          int returned;
+          returned = waitpid(-1, &status, WNOHANG);
+
+          if (returned < 0)
+          {
+            lua_pushnumber(__ls, 1);
+            break;
+          }
+
+          if (WIFEXITED(status) || WIFSIGNALED(status))
+          {
+            lua_pushnumber(__ls, 0);
+            break;
+          }
+
+          current_time++;
+        }
+      }
+
+      return 1;
+    }
+
+    int BruiserLuaSetBinPath(lua_State* __ls)
+    {
+      int numargs = lua_gettop(__ls);
+
+      if (numargs != 1)
+      {
+        PRINT_WITH_COLOR_LB(RED, "wrong number of args. should be one string. see help().");
+      }
+
+      ShellGlobalInstance.BINPATH = lua_tostring(__ls, 1);
+
+      return 0;
+    }
+
+    int BruiserLuaGetBinPath(lua_State* __ls)
+    {
+      lua_pushstring(__ls, ShellGlobalInstance.BINPATH.c_str());
+      std::cout << BLUE << ShellGlobalInstance.BINPATH << NORMAL << "\n";
+      return 1;
+    }
+
+    int BruiserLuaGetMakePath(lua_State* __ls)
+    {
+      lua_pushstring(__ls, ShellGlobalInstance.MAKEPATH.c_str());
+      std::cout << BLUE << ShellGlobalInstance.MAKEPATH << NORMAL << "\n";
+      return 1;
+    }
+
+    int BruiserLuaGetPath(lua_State* __ls)
+    {
+      unsigned int returncount = 0;
+
+      for (auto &iter : ShellGlobalInstance.PATH)
+      {
+        lua_pushstring(__ls, iter.c_str());
+        std::cout << BLUE << iter.c_str() << NORMAL << "\n";
+        returncount++;
+      }
+
+      return returncount;
+    }
+
+    int BruiserLuaGetSourceFiles(lua_State* __ls)
+    {
+      unsigned int returncount = 0;
+
+      for (auto &iter : ShellGlobalInstance.SOURCE_FILES)
+      {
+        lua_pushstring(__ls, iter.c_str());
+        std::cout << BLUE << iter.c_str() << NORMAL << "\n";
+        returncount++;
+      }
+
+      return returncount;
+    }
+
+    int BruiserLuaChangeDirectory(lua_State* __ls)
+    {
+      int numargs = lua_gettop(__ls);
+
+      if (numargs != 1)
+      {
+        PRINT_WITH_COLOR_LB(RED, "wrond number of arguments. needed one. see help().");
+        lua_pushnumber(__ls, 1U);
+        return 1;
+      }
+
+      std::string destinationpath = lua_tostring(__ls, 1);
+
+      pid_t pid = fork();
+
+      if (pid < 0)
+      {
+        PRINT_WITH_COLOR_LB(RED, "could not fork...");
+        lua_pushnumber(__ls, EXIT_FAILURE);
+        return 1;
+      }
+
+      if (pid == 0)
+      {
+        int retval = execl("/usr/bin/cd", "cd", destinationpath.c_str(), NULL);
+        std::cout << BLUE << "child returned " << retval << NORMAL << "\n";
+      }
+
+      if (pid > 0)
+      {
+        int status;
+        pid_t returned;
+        returned =  waitpid(pid, &status, 0);
+        lua_pushnumber(__ls, returned);
+      }
+
+      return 1;
     }
 
 #define LIST_GENERATOR(__x1) \
@@ -1328,8 +1492,11 @@ int LuaDispatch(lua_State* __ls)
 /**********************************************************************************************************************/
 /**********************************************************************************************************************/
 /*Main*/
-int main(int argc, const char **argv) 
+int main(int argc, const char **argv)
 {
+  /*initializing the log*/
+  bruiser::BruiserReport BruiserLog;
+
   /*gets the compilation database and options for the clang instances that we would later run*/
   CommonOptionsParser op(argc, argv, BruiserCategory);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
@@ -1388,6 +1555,13 @@ int main(int argc, const char **argv)
     lua_register(LE.GetLuaState(), "extractmutagen", &LuaDispatch<&LuaWrapper::BruiserLuaMutagenExtraction>);
     lua_register(LE.GetLuaState(), "strainrecognition", &LuaDispatch<&LuaWrapper::BruiserLuaStrainRecognition>);
     lua_register(LE.GetLuaState(), "setmakepath", &LuaDispatch<&LuaWrapper::BruiserLuaSetMakePath>);
+    lua_register(LE.GetLuaState(), "run", &LuaDispatch<&LuaWrapper::BruiserLuaRun>);
+    lua_register(LE.GetLuaState(), "setbinpath", &LuaDispatch<&LuaWrapper::BruiserLuaSetBinPath>);
+    lua_register(LE.GetLuaState(), "getbinpath", &LuaDispatch<&LuaWrapper::BruiserLuaGetBinPath>);
+    lua_register(LE.GetLuaState(), "getmakepath", &LuaDispatch<&LuaWrapper::BruiserLuaGetMakePath>);
+    lua_register(LE.GetLuaState(), "getpaths", &LuaDispatch<&LuaWrapper::BruiserLuaGetPath>);
+    lua_register(LE.GetLuaState(), "getsourcefiles", &LuaDispatch<&LuaWrapper::BruiserLuaGetSourceFiles>);
+    lua_register(LE.GetLuaState(), "changedirectory", &LuaDispatch<&LuaWrapper::BruiserLuaChangeDirectory>);
     /*its just regisering the List function from LuaWrapper with X-macros.*/
 #define X(__x1, __x2) lua_register(LE.GetLuaState(), #__x1, &LuaDispatch<&LuaWrapper::List##__x1>);
 
@@ -1396,7 +1570,27 @@ int main(int argc, const char **argv)
 #undef X
 #undef LIST_LIST_GENERATORS
 
-    while((command = linenoise("bruiser>>")) != NULL)
+    /*The non-cli execution loop*/
+    if (NonCLILuaScript != "")
+    {
+      std::ifstream lua_script_noncli;
+      lua_script_noncli.open(NonCLILuaScript);
+      std::string line;
+
+      while(std::getline(lua_script_noncli, line))
+      {
+        BruiserLog.PrintToLog("running in non-cli mode...");
+        BruiserLog.PrintToLog(line + "\n");
+        LE.RunChunk((char*)line.c_str());
+      }
+
+      LE.Cleanup();
+
+      return 0;
+    }
+
+    /*cli execution loop*/
+    while((command = linenoise(">>>")) != NULL)
     {
       linenoiseHistoryAdd(command);
       linenoiseHistorySave(SHELL_HISTORY_FILE);
@@ -1407,7 +1601,7 @@ int main(int argc, const char **argv)
     /*end of bruiser main*/
     return 0;
   } //end of cli block
-  
+
 } //end of main
 /*last line intentionally left blank.*/
 

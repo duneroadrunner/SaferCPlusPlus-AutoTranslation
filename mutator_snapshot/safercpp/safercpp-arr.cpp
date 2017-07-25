@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.*
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <locale>
 /*Clang Headers*/
@@ -45,6 +46,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.*
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/AST/ASTImporter.h"
+#include "clang/AST/ASTDiagnostic.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 /*LLVM Headers*/
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Function.h"
@@ -58,10 +62,11 @@ using namespace clang::tooling;
 /**********************************************************************************************************************/
 static llvm::cl::OptionCategory MatcherSampleCategory("TBD");
 
-cl::opt<bool> CheckSystemHeader("SysHeader", cl::desc("safercpp will run through System Headers"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
-cl::opt<bool> MainFileOnly("MainOnly", cl::desc("safercpp will only report the results that reside in the main file"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
-cl::opt<bool> SafeSubset("SafeSubset", cl::desc("safercpp will check for elements outside of the (memory) safe subset of the language"), cl::init(true), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
-cl::opt<bool> ConvertToSCPP("ConvertToSCPP", cl::desc("safercpp will translate the source to a (memory) safe subset of the language"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
+cl::opt<bool> CheckSystemHeader("SysHeader", cl::desc("process system headers also"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
+cl::opt<bool> MainFileOnly("MainOnly", cl::desc("process the main file only"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
+cl::opt<bool> ConvertToSCPP("ConvertToSCPP", cl::desc("translate the source to a (memory) safe subset of the language"), cl::init(true), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
+cl::opt<bool> CTUAnalysis("CTUAnalysis", cl::desc("cross translation unit analysis"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
+cl::opt<bool> EnableNamespaceImport("EnableNamespaceImport", cl::desc("enable importing of namespaces from other translation units"), cl::init(false), cl::cat(MatcherSampleCategory), cl::ZeroOrMore);
 /**********************************************************************************************************************/
 
 SourceRange nice_source_range(const SourceRange& sr, Rewriter &Rewrite) {
@@ -269,7 +274,7 @@ static std::vector<const DeclaratorDecl*> IndividualDeclaratorDecls(const Declar
 	} else {
 		for (auto decl_iter = decl_context->decls_begin(); decl_iter != decl_context->decls_end(); decl_iter++) {
 			auto decl = (*decl_iter);
-			auto l_DD = dynamic_cast<const DeclaratorDecl*>(decl);
+			auto l_DD = dyn_cast<const DeclaratorDecl>(decl);
 			if (l_DD) {
 				auto DDSR = nice_source_range(l_DD->getSourceRange(), Rewrite);
 				SourceLocation l_SL = DDSR.getBegin();
@@ -1394,6 +1399,8 @@ public:
 	std::string m_action_species;
 	bool m_direct_type_must_be_non_const = false;
 	bool m_changed_from_original = false;
+	bool m_just_a_native_array = false;
+	std::string m_native_array_size_text;
 };
 
 static CTypeIndirectionPrefixAndSuffixItem generate_type_indirection_prefix_and_suffix(CIndirectionStateStack& indirection_state_stack,
@@ -1438,9 +1445,9 @@ static CTypeIndirectionPrefixAndSuffixItem generate_type_indirection_prefix_and_
 					if (is_last_indirection) {
 						//retval.m_direct_type_must_be_non_const = true;
 					}
-					prefix_str = prefix_str + "mse::TNullableAnyRandomAccessIterator<";
-					suffix_str = "> " + suffix_str;
-					retval.m_action_species = "native pointer to TNullableAnyRandomAccessIterator";
+					prefix_str = prefix_str + "MSE_LH_ARRAY_ITERATOR_TYPE(";
+					suffix_str = ") " + suffix_str;
+					retval.m_action_species = "native pointer to MSE_LH_ARRAY_ITERATOR_TYPE";
 				}
 			} else if ("dynamic array" == indirection_state_stack[i].current()) {
 				if (is_char_star) {
@@ -1453,13 +1460,14 @@ static CTypeIndirectionPrefixAndSuffixItem generate_type_indirection_prefix_and_
 					if (is_last_indirection) {
 						retval.m_direct_type_must_be_non_const = true;
 					}
-					prefix_str = prefix_str + "mse::lh::TIPointerWithBundledVector<";
+					//prefix_str = prefix_str + "mse::lh::TIPointerWithBundledVector<";
+					prefix_str = prefix_str + "MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(";
 					if (is_a_function_parameter) {
-						suffix_str = "> " + suffix_str;
-						retval.m_action_species = "native pointer parameter to TIPointerWithBundledVector";
+						suffix_str = ") " + suffix_str;
+						retval.m_action_species = "native pointer parameter to DYNAMIC_ARRAY_ITERATOR_TYPE";
 					} else {
-						suffix_str = "> " + suffix_str;
-						retval.m_action_species = "native pointer to TIPointerWithBundledVector";
+						suffix_str = ") " + suffix_str;
+						retval.m_action_species = "native pointer to DYNAMIC_ARRAY_ITERATOR_TYPE";
 					}
 				}
 			} else if ("native array" == indirection_state_stack[i].current()) {
@@ -1477,16 +1485,21 @@ static CTypeIndirectionPrefixAndSuffixItem generate_type_indirection_prefix_and_
 				} else {
 					l_changed_from_original = true;
 					if (is_a_function_parameter) {
-						prefix_str = prefix_str + "mse::TNullableAnyRandomAccessIterator<";
-						suffix_str = ", " + size_text + "> " + suffix_str;
-						retval.m_action_species = "native array parameter to TNullableAnyRandomAccessIterator";
+						prefix_str = prefix_str + "MSE_LH_ARRAY_ITERATOR_TYPE(";
+						suffix_str = ") " + suffix_str;
+						retval.m_action_species = "native array parameter to MSE_LH_ARRAY_ITERATOR_TYPE";
 					} else {
 						if (is_last_indirection) {
 							retval.m_direct_type_must_be_non_const = true;
 						}
-						prefix_str = prefix_str + "mse::lh::TNativeArrayReplacement<";
-						suffix_str = ", " + size_text + "> " + suffix_str;
-						retval.m_action_species = "native array to TNativeArrayReplacement";
+						prefix_str = prefix_str + "MSE_LH_FIXED_ARRAY_TYPE_PREFIX(" + size_text + ") ";
+						suffix_str = "MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(" + size_text + ") " + suffix_str;
+						post_name_suffix_str = post_name_suffix_str + " MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(" + size_text + ")";
+						retval.m_action_species = "native array to MSE_LH_FIXED_ARRAY_TYPE";
+						if (1 == indirection_state_stack.size()) {
+							retval.m_just_a_native_array = true;
+							retval.m_native_array_size_text = size_text;
+						}
 					}
 				}
 			} else if ("native pointer" == indirection_state_stack[i].current()) {
@@ -1564,7 +1577,7 @@ static CDeclarationReplacementCodeItem generate_declaration_replacement_code(con
 	bool type_is_function_type = false;
 	assert(DD->isFunctionOrFunctionTemplate() == QT->isFunctionType());
 	if (QT->isFunctionType()) {
-		FND = dynamic_cast<const clang::FunctionDecl*>(DD);
+		FND = dyn_cast<const clang::FunctionDecl>(DD);
 		if (FND) {
 			type_is_function_type = true;
 			QT = FND->getReturnType();
@@ -1596,7 +1609,7 @@ static CDeclarationReplacementCodeItem generate_declaration_replacement_code(con
 	bool initialization_expr_is_a_constructor_call = false;
 	bool is_function = DD->isFunctionOrFunctionTemplate();
 
-	auto VD = dynamic_cast<const clang::VarDecl *>(DD);
+	auto VD = dyn_cast<const clang::VarDecl>(DD);
 	if (VD) {
 		is_vardecl = true;
 		storage_class = VD->getStorageClass();
@@ -1646,7 +1659,7 @@ static CDeclarationReplacementCodeItem generate_declaration_replacement_code(con
 			ddcs_ref.m_original_initialization_has_been_noted = true;
 		}
 	} else {
-		auto FD = dynamic_cast<const clang::FieldDecl*>(DD);
+		auto FD = dyn_cast<const clang::FieldDecl>(DD);
 		if (FD) {
 			is_member = true;
 
@@ -1788,10 +1801,16 @@ static CDeclarationReplacementCodeItem generate_declaration_replacement_code(con
 			} else if (is_static) {
 				replacement_code += "static ";
 			}
-			replacement_code += prefix_str + direct_qtype_str + suffix_str;
-			replacement_code += " ";
-			replacement_code += variable_name;
-			replacement_code += post_name_suffix_str;
+			if (res4.m_just_a_native_array) {
+				replacement_code += "MSE_LH_FIXED_ARRAY_DECLARATION(" + direct_qtype_str;
+				replacement_code += ", " + res4.m_native_array_size_text;
+				replacement_code += ", " + variable_name + ")";
+			} else {
+				replacement_code += prefix_str + direct_qtype_str + suffix_str;
+				replacement_code += " ";
+				replacement_code += variable_name;
+				replacement_code += post_name_suffix_str;
+			}
 
 			replacement_code += initializer_append_str;
 		} else {
@@ -1829,7 +1848,7 @@ static void update_declaration(const DeclaratorDecl& ddecl, Rewriter &Rewrite, C
 
 	assert(ddecl.isFunctionOrFunctionTemplate() == QT->isFunctionType());
 	if ((TP->isFunctionType()) || (false)) {
-		const clang::FunctionDecl* FND = dynamic_cast<const clang::FunctionDecl*>(DD);
+		const clang::FunctionDecl* FND = dyn_cast<const clang::FunctionDecl>(DD);
 		if (FND) {
 			auto name_str = FND->getNameAsString();
 			if (std::string::npos != name_str.find("lodepng_chunk_data_const")) {
@@ -2132,12 +2151,12 @@ CArrayInferenceInfo infer_array_type_info_from_stmt(const clang::Stmt& stmt_cref
 			auto expr2_DRE = llvm::cast<const clang::DeclRefExpr>(expr2);
 			if (expr2_DRE) {
 				auto expr2_decl = expr2_DRE->getDecl();
-				expr2_DD = dynamic_cast<const DeclaratorDecl*>(expr2_decl);
+				expr2_DD = dyn_cast<const DeclaratorDecl>(expr2_decl);
 			} else { assert(false); }
 		} else if (clang::Stmt::StmtClass::MemberExprClass == expr2->getStmtClass()) {
 			auto expr2_ME = llvm::cast<const clang::MemberExpr>(expr2);
 			if (expr2_ME) {
-				auto expr2_FD = dynamic_cast<const clang::FieldDecl*>(expr2_ME->getMemberDecl());
+				auto expr2_FD = dyn_cast<const clang::FieldDecl>(expr2_ME->getMemberDecl());
 				if (expr2_FD) {
 					expr2_DD = expr2_FD;
 				} else { assert(false); }
@@ -2926,7 +2945,7 @@ public:
 
 	virtual void run(const MatchFinder::MatchResult &MR)
 	{
-		if (/*SafeSubset && */(MR.Nodes.getNodeAs<clang::CastExpr>("mcsssarraytopointerdecay") != nullptr))
+		if ((MR.Nodes.getNodeAs<clang::CastExpr>("mcsssarraytopointerdecay") != nullptr))
 		{
 			const CastExpr* CE = MR.Nodes.getNodeAs<clang::CastExpr>("mcsssarraytopointerdecay");
 
@@ -2976,7 +2995,7 @@ public:
 
 	virtual void run(const MatchFinder::MatchResult &MR)
 	{
-		if (SafeSubset && (MR.Nodes.getNodeAs<clang::VarDecl>("mcsssnativepointer") != nullptr))
+		if ((MR.Nodes.getNodeAs<clang::VarDecl>("mcsssnativepointer") != nullptr))
 		{
 			const VarDecl *VD = MR.Nodes.getNodeAs<clang::VarDecl>("mcsssnativepointer");
 
@@ -3002,7 +3021,7 @@ public:
 			else
 			{
 				{
-					if (false && SafeSubset) {
+					if (false) {
 						std::cout << "sss1.1:" << "native pointer:";
 						std::cout << SL.printToString(*MR.SourceManager) << ":" << std::endl;
 
@@ -3393,12 +3412,12 @@ public:
 			}
 
 			auto decl = DRE->getDecl();
-			auto DD = dynamic_cast<const DeclaratorDecl*>(decl);
+			auto DD = dyn_cast<const DeclaratorDecl>(decl);
 
 			const clang::FieldDecl* FD = nullptr;
 			if (nullptr != ME) {
 				auto member_decl = ME->getMemberDecl();
-				FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+				FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 			}
 			if (nullptr != FD) {
 				DD = FD;
@@ -3502,13 +3521,13 @@ public:
 				auto lhs_QT = LHS->getType();
 
 				auto decl = DRE->getDecl();
-				DD = dynamic_cast<const DeclaratorDecl*>(decl);
-				auto VD = dynamic_cast<const VarDecl*>(decl);
+				DD = dyn_cast<const DeclaratorDecl>(decl);
+				auto VD = dyn_cast<const VarDecl>(decl);
 
 				const clang::FieldDecl* FD = nullptr;
 				if (nullptr != ME) {
 					auto member_decl = ME->getMemberDecl();
-					FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+					FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 				}
 				if (nullptr != FD) {
 					DD = FD;
@@ -3741,17 +3760,22 @@ public:
 							initializer_info_str = " = MSE_LH_REALLOC(" + element_type_str + ", " + alloc_function_info1.m_realloc_pointer_arg_source_text;
 							initializer_info_str += ", " + alloc_function_info1.m_num_bytes_arg_source_text + ")";
 						} else {
-							num_elements_text = "(";
-							num_elements_text += alloc_function_info1.m_num_bytes_arg_source_text;
-							if (true || (("void" != element_type_str) && ("const void" != element_type_str))) {
-								num_elements_text += ") / sizeof(";
-								num_elements_text += element_type_str;
-							} else {
-								/* todo: something */
-							}
-							num_elements_text += ")";
+							if (false) {
+								num_elements_text = "(";
+								num_elements_text += alloc_function_info1.m_num_bytes_arg_source_text;
+								if (true || (("void" != element_type_str) && ("const void" != element_type_str))) {
+									num_elements_text += ") / sizeof(";
+									num_elements_text += element_type_str;
+								} else {
+									/* todo: something */
+								}
+								num_elements_text += ")";
 
-							initializer_info_str = "(" + num_elements_text + ")";
+								initializer_info_str = "(" + num_elements_text + ")";
+							} else {
+								initializer_info_str = " = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(" + element_type_str + ")";
+								initializer_info_str += ", " + alloc_function_info1.m_num_bytes_arg_source_text + ")";
+							}
 						}
 
 						auto decl_source_location_str = decl_source_range.getBegin().printToString(*MR.SourceManager);
@@ -4342,13 +4366,13 @@ public:
 							const clang::DeclaratorDecl* DD = nullptr;
 
 							auto decl = DRE->getDecl();
-							DD = dynamic_cast<const DeclaratorDecl*>(decl);
-							auto VD = dynamic_cast<const VarDecl*>(decl);
+							DD = dyn_cast<const DeclaratorDecl>(decl);
+							auto VD = dyn_cast<const VarDecl>(decl);
 
 							const clang::FieldDecl* FD = nullptr;
 							if (nullptr != ME) {
 								auto member_decl = ME->getMemberDecl();
-								FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+								FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 							}
 							if (nullptr != FD) {
 								DD = FD;
@@ -4518,13 +4542,13 @@ public:
 							CArrayInferenceInfo res2;
 
 							auto decl = DRE->getDecl();
-							DD = dynamic_cast<const DeclaratorDecl*>(decl);
-							auto VD = dynamic_cast<const VarDecl*>(decl);
+							DD = dyn_cast<const DeclaratorDecl>(decl);
+							auto VD = dyn_cast<const VarDecl>(decl);
 
 							const clang::FieldDecl* FD = nullptr;
 							if (nullptr != ME) {
 								auto member_decl = ME->getMemberDecl();
-								FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+								FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 							}
 							if (nullptr != FD) {
 								DD = FD;
@@ -5144,6 +5168,11 @@ public:
 				for (const auto& function_decl : function_decls_range) {
 					auto fdecl_source_range = nice_source_range(function_decl->getSourceRange(), Rewrite);
 					auto fdecl_source_location_str = fdecl_source_range.getBegin().printToString(*MR.SourceManager);
+					if (std::string::npos != fdecl_source_location_str.find("lodepng.cpp")) {
+						int q = 5;
+					} else if (std::string::npos != fdecl_source_location_str.find("lodepng_util.cpp")) {
+						int q = 5;
+					}
 
 					bool std_vector_insert_flag = false;
 					bool std_vector_insert_range_flag = false;
@@ -5442,7 +5471,7 @@ public:
 				}
 			} else {
 				auto D = CE->getCalleeDecl();
-				auto DD = dynamic_cast<const DeclaratorDecl*>(D);
+				auto DD = dyn_cast<const DeclaratorDecl>(D);
 				auto EX = CE->getCallee();
 
 				if (DD && EX) {
@@ -5830,13 +5859,13 @@ public:
 							CArrayInferenceInfo res2;
 
 							auto decl = DRE->getDecl();
-							DD = dynamic_cast<const DeclaratorDecl*>(decl);
-							auto VD = dynamic_cast<const VarDecl*>(decl);
+							DD = dyn_cast<const DeclaratorDecl>(decl);
+							auto VD = dyn_cast<const VarDecl>(decl);
 
 							const clang::FieldDecl* FD = nullptr;
 							if (nullptr != ME) {
 								auto member_decl = ME->getMemberDecl();
-								FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+								FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 							}
 							if (nullptr != FD) {
 								DD = FD;
@@ -6015,13 +6044,13 @@ public:
 							CArrayInferenceInfo res2;
 
 							auto decl = DRE->getDecl();
-							DD = dynamic_cast<const DeclaratorDecl*>(decl);
-							auto VD = dynamic_cast<const VarDecl*>(decl);
+							DD = dyn_cast<const DeclaratorDecl>(decl);
+							auto VD = dyn_cast<const VarDecl>(decl);
 
 							const clang::FieldDecl* FD = nullptr;
 							if (nullptr != ME) {
 								auto member_decl = ME->getMemberDecl();
-								FD = dynamic_cast<const clang::FieldDecl*>(ME->getMemberDecl());
+								FD = dyn_cast<const clang::FieldDecl>(ME->getMemberDecl());
 							}
 							if (nullptr != FD) {
 								DD = FD;
@@ -6122,20 +6151,230 @@ private:
 	CState1& m_state1;
 };
 
+
+struct CDiag {
+	CDiag() {}
+	CDiag(IntrusiveRefCntPtr<DiagnosticIDs>& DiagIDs_ircptr_param, IntrusiveRefCntPtr<DiagnosticsEngine>& DiagEngine_ircptr_param)
+	: DiagIDs_ircptr(DiagIDs_ircptr_param), DiagEngine_ircptr(DiagEngine_ircptr_param) {}
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs_ircptr;
+	IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine_ircptr;
+};
+struct CMultiTUState {
+  std::vector<std::unique_ptr<clang::ASTUnit>> ast_units;
+  std::vector<CDiag> diags;
+};
+
+void import_decl(ASTImporter& Importer, clang::Decl& decl_ref, clang::Rewriter& localRewriter, CompilerInstance &CI) {
+	auto D = &decl_ref;
+	auto *ToDecl = Importer.Import(D);
+	if (ToDecl) {
+		auto TDSR = nice_source_range(ToDecl->getSourceRange(), localRewriter);
+		if (TDSR.isValid()) {
+			auto TDSL = TDSR.getBegin();
+			auto ToDecl_source_location_str = TDSL.printToString(CI.getASTContext().getSourceManager());
+
+			if (std::string::npos != ToDecl_source_location_str.find("lodepng.cpp")) {
+				int q = 5;
+			} else if (std::string::npos != ToDecl_source_location_str.find("lodepng_util.cpp")) {
+				int q = 5;
+			} else {
+				int q = 5;
+			}
+			int q = 5;
+		} else {
+			int q = 5;
+		}
+	} else {
+		int q = 5;
+	}
+}
+
+void import_other_TUs(CMultiTUState* multi_tu_state_ptr, CompilerInstance &CI, int current_tu_num = 0) {
+  if (multi_tu_state_ptr) {
+    errs() << "EXECUTE ACTION\n";
+    //CompilerInstance &CI = getCompilerInstance();
+
+    IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(CI.getDiagnostics().getDiagnosticIDs());
+  	IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(new DiagnosticsEngine(DiagIDs, &CI.getDiagnosticOpts(),
+  			new IgnoringDiagConsumer(),/*ShouldOwnClient=*/true));
+  	CDiag diag(DiagIDs, DiagEngine);
+  	multi_tu_state_ptr->diags.push_back(diag);
+  	//CI.setDiagnostics(DiagEngine.get());
+
+  	//CI.getPreprocessor().setDiagnostics(*DiagEngine);
+
+  	//CI.getDiagnostics().setClient(new IgnoringDiagConsumer(), true/*take ownership*/);
+
+    //CI.getDiagnostics().getClient()->BeginSourceFile(CI.getASTContext().getLangOpts());
+    //CI.getDiagnostics().SetArgToStringFn(&FormatASTNodeDiagnosticArgument, &CI.getASTContext());
+
+    //llvm::raw_fd_ostream *output = CI.createOutputFile("test.ast",true,false,"","",true);
+    //auto output = CI.createOutputFile("test.ast",true,false,"","",true);
+    //*output << "Test\n";
+    //TheRewriter.setSourceMgr(CI.getASTContext().getSourceManager(), CI.getASTContext().getLangOpts());
+
+  	errs() << multi_tu_state_ptr->ast_units.size() << "\n";
+    for (unsigned I = 0, N = multi_tu_state_ptr->ast_units.size(); I != N; ++I) {
+    	if (current_tu_num - 1 == int(I)) {
+    		continue;
+    	}
+    	errs() << "LOOP\n";
+    	//IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(new DiagnosticsEngine(DiagIDs, &CI.getDiagnosticOpts(),
+    	//		new ForwardingDiagnosticConsumer(*CI.getDiagnostics().getClient()),/*ShouldOwnClient=*/true));
+    	IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+    	TextDiagnosticPrinter *DiagClient = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+    	IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+    	IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
+    	//multi_tu_state_ptr->ast_units.at(I)->getDiagnostics().setClient(DiagClient, true/*take ownership*/);
+
+    	//CI.getDiagnostics().Reset();
+    	//CI.getDiagnostics().setSourceManager(&(multi_tu_state_ptr->ast_units.at(I)->getASTContext().getSourceManager()));
+
+    	if (!multi_tu_state_ptr->ast_units.at(I))
+    		continue;
+
+    	if (true) {
+    		ASTImporter Importer(CI.getASTContext(),
+    				CI.getFileManager(),
+						multi_tu_state_ptr->ast_units.at(I)->getASTContext(),
+						multi_tu_state_ptr->ast_units.at(I)->getFileManager(),
+						/* MinimalImport=*/false);
+
+    		clang::Rewriter localRewriter;
+    		localRewriter.setSourceMgr(multi_tu_state_ptr->ast_units.at(I)->getASTContext().getSourceManager(), multi_tu_state_ptr->ast_units.at(I)->getASTContext().getLangOpts());
+
+    		TranslationUnitDecl *TU = multi_tu_state_ptr->ast_units.at(I)->getASTContext().getTranslationUnitDecl();
+    		for (auto *D : TU->decls()) {
+    			assert(D);
+    			D->dump();
+
+    			auto SR = nice_source_range(D->getSourceRange(), localRewriter);
+    			if (!SR.isValid()) {
+    				continue;
+    			}
+    			if (filtered_out_by_location(localRewriter.getSourceMgr(), SR.getBegin())) {
+    				continue;
+    			}
+
+					auto SL = SR.getBegin();
+					std::string source_location_str = SL.printToString(localRewriter.getSourceMgr());
+
+					if (std::string::npos != source_location_str.find("lodepng.cpp")) {
+						int q = 5;
+					} else if (std::string::npos != source_location_str.find("lodepng_util.cpp")) {
+						int q = 5;
+					} else {
+						int q = 5;
+					}
+
+					auto *ND = dyn_cast<const NamedDecl>(D);
+    			if (!ND) {
+    				continue;
+    			}
+    			std::string name = ND->getNameAsString();
+
+    			// Don't re-import __va_list_tag, __builtin_va_list.
+    			//if (const auto *ND = dyn_cast<NamedDecl>(D))
+    				if (IdentifierInfo *II = ND->getIdentifier())
+    					if (II->isStr("__va_list_tag") || II->isStr("__builtin_va_list") || II->isStr("main"))
+    						continue;
+
+    			if (nullptr == Importer.GetAlreadyImportedOrNull(D)) {
+    				auto FD = D->getAsFunction();
+    				if (FD) {
+    					std::string function_name = FD->getNameAsString();
+    				} else if (llvm::isa<clang::NamespaceDecl>(D)) {
+    					auto NSD = llvm::cast<clang::NamespaceDecl>(D);
+    					assert(NSD);
+    					auto NNS = clang::NestedNameSpecifier::Create(multi_tu_state_ptr->ast_units.at(I)->getASTContext(), nullptr, NSD);
+    					if (false && NNS) {
+    						auto *NNSToDecl = Importer.Import(NNS);
+    						if (NNSToDecl) {
+      						int q = 5;
+      					} else {
+      						int q = 7;
+    						}
+    					} else {
+    						int q = 7;
+    					}
+
+    					if (EnableNamespaceImport) {
+    						for (auto *D : NSD->decls()) {
+    							D->dump();
+    							import_decl(Importer, *D, localRewriter, CI);
+    						}
+    					}
+    					continue;
+    				} else {
+    					int q = 5;
+    				}
+
+    				import_decl(Importer, *D, localRewriter, CI);
+    			} else {
+    				int q = 5;
+    			}
+    		}
+    	}
+
+    }
+    //CI.createDefaultOutputFile()->flush();
+    //CI.createDefaultOutputFile()->close();
+    //CI.getDiagnostics().getClient()->EndSourceFile();
+  }
+}
+
+class Misc1 : public MatchFinder::MatchCallback
+{
+public:
+	Misc1 (Rewriter &Rewrite, CState1& state1, CompilerInstance &CI_ref, int current_tu_num = 0) :
+		Rewrite(Rewrite), m_state1(state1), CI(CI_ref), m_current_tu_num(current_tu_num) {
+		s_current_tu_num += 1;
+		if (0 == m_current_tu_num) {
+			m_current_tu_num = s_current_tu_num;
+		}
+	}
+
+	virtual void run(const MatchFinder::MatchResult &MR)
+	{
+		if (!m_other_TUs_imported) {
+			if (CTUAnalysis) {
+				import_other_TUs(&s_multi_tu_state, CI, m_current_tu_num);
+			}
+			m_other_TUs_imported = true;
+		}
+	}
+
+	static CMultiTUState& s_multi_tu_state_ref() { return s_multi_tu_state; }
+
+private:
+	Rewriter &Rewrite;
+	CState1& m_state1;
+  CompilerInstance &CI;
+  int m_current_tu_num = 0;
+
+  bool m_other_TUs_imported = false;
+  static CMultiTUState s_multi_tu_state;
+  static int s_current_tu_num;
+};
+CMultiTUState Misc1::s_multi_tu_state;
+int Misc1::s_current_tu_num = 0;
+
 /**********************************************************************************************************************/
 class MyASTConsumer : public ASTConsumer {
 
 public:
-  MyASTConsumer(Rewriter &R) : HandlerForSSSNativePointer(R), HandlerForSSSArrayToPointerDecay(R, m_state1),
+  MyASTConsumer(Rewriter &R, CompilerInstance &CI) : HandlerForSSSNativePointer(R), HandlerForSSSArrayToPointerDecay(R, m_state1),
 	HandlerForSSSVarDecl2(R, m_state1), HandlerForSSSPointerArithmetic2(R, m_state1), HandlerForSSSMalloc2(R, m_state1),
 	HandlerForSSSMallocInitializer2(R, m_state1), HandlerForSSSNullInitializer(R, m_state1), HandlerForSSSFree2(R, m_state1),
 	HandlerForSSSSetToNull2(R, m_state1), HandlerForSSSCompareWithNull2(R, m_state1), HandlerForSSSMemset(R, m_state1), HandlerForSSSMemcpy(R, m_state1),
 	HandlerForSSSConditionalInitializer(R, m_state1), HandlerForSSSAssignment(R, m_state1), HandlerForSSSParameterPassing(R, m_state1),
-	HandlerForSSSReturnValue(R, m_state1), HandlerForSSSFRead(R, m_state1), HandlerForSSSFWrite(R, m_state1)
+	HandlerForSSSReturnValue(R, m_state1), HandlerForSSSFRead(R, m_state1), HandlerForSSSFWrite(R, m_state1), HandlerMisc1(R, m_state1, CI)
   {
-	  Matcher.addMatcher(varDecl(hasType(pointerType())).bind("mcsssnativepointer"), &HandlerForSSSNativePointer);
+	  //Matcher.addMatcher(varDecl(hasType(pointerType())).bind("mcsssnativepointer"), &HandlerForSSSNativePointer);
 
-	  Matcher.addMatcher(castExpr(allOf(hasCastKind(CK_ArrayToPointerDecay), unless(hasParent(arraySubscriptExpr())))).bind("mcsssarraytopointerdecay"), &HandlerForSSSArrayToPointerDecay);
+	  //Matcher.addMatcher(castExpr(allOf(hasCastKind(CK_ArrayToPointerDecay), unless(hasParent(arraySubscriptExpr())))).bind("mcsssarraytopointerdecay"), &HandlerForSSSArrayToPointerDecay);
+
+	  Matcher.addMatcher(DeclarationMatcher(anything()), &HandlerMisc1);
 
 	  //Matcher.addMatcher(clang::ast_matchers::declaratorDecl().bind("mcsssvardecl"), &HandlerForSSSVarDecl2);
 	  Matcher.addMatcher(varDecl(anyOf(
@@ -6353,6 +6592,7 @@ private:
   MCSSSReturnValue HandlerForSSSReturnValue;
   MCSSSFRead HandlerForSSSFRead;
   MCSSSFWrite HandlerForSSSFWrite;
+  Misc1 HandlerMisc1;
 
   MatchFinder Matcher;
 };
@@ -6378,7 +6618,7 @@ struct CFirstIncludeInfo {
 class MyPPCallbacks : public PPCallbacks
 {
 public:
-	MyPPCallbacks(Rewriter& Rewriter_ref) : m_Rewriter_ref(Rewriter_ref) {}
+	MyPPCallbacks(Rewriter& Rewriter_ref, CompilerInstance &CI_ref) : m_Rewriter_ref(Rewriter_ref), CI(CI_ref) {}
 
 	void InclusionDirective(
     SourceLocation hash_loc,
@@ -6453,9 +6693,22 @@ public:
   std::map<SourceLocation, std::shared_ptr<CFirstIncludeInfo>> m_first_include_info_map;
   std::vector<std::shared_ptr<CFirstIncludeInfo>> m_current_fii_shptr_stack;
   Rewriter& m_Rewriter_ref;
+  CompilerInstance &CI;
 };
 
-class MyFrontendAction : public ASTFrontendAction 
+/* The number of parameters ASTFrontendAction::BeginSourceFileAction() has depends
+ * on the version of the llvm library being used. Using ASTFrontendActionCompatibilityWrapper1
+ * in place of ASTFrontendAction insulates you from this difference based on the
+ * library version being used. */
+class ASTFrontendActionCompatibilityWrapper1 : public ASTFrontendAction {
+public:
+	virtual bool BeginSourceFileAction(CompilerInstance &ci) = 0;
+	virtual bool BeginSourceFileAction(CompilerInstance &ci, StringRef) {
+		return BeginSourceFileAction(ci);
+	}
+};
+
+class MyFrontendAction : public ASTFrontendActionCompatibilityWrapper1
 {
 public:
   MyFrontendAction() {
@@ -6468,8 +6721,9 @@ public:
 	  }
   }
 
-  bool BeginSourceFileAction(CompilerInstance &ci, StringRef) override {
-    std::unique_ptr<MyPPCallbacks> my_pp_callbacks_ptr(new MyPPCallbacks(TheRewriter));
+  bool BeginSourceFileAction(CompilerInstance &ci) override {
+  	s_source_file_action_num += 1;
+    std::unique_ptr<MyPPCallbacks> my_pp_callbacks_ptr(new MyPPCallbacks(TheRewriter, ci));
 
     clang::Preprocessor &pp = ci.getPreprocessor();
     pp.addPPCallbacks(std::move(my_pp_callbacks_ptr));
@@ -6487,9 +6741,7 @@ public:
 
       assert(my_pp_callbacks_ptr);
       if (my_pp_callbacks_ptr) {
-      	// do whatever you want with the callback now
-
-      	for (auto& item_ref : my_pp_callbacks_ptr->m_first_include_info_map) {
+         	for (auto& item_ref : my_pp_callbacks_ptr->m_first_include_info_map) {
       		auto& fii_ref = *(item_ref.second);
         	assert(fii_ref.m_beginning_of_file_loc_is_valid);
 
@@ -6518,23 +6770,101 @@ public:
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
-    TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return llvm::make_unique<MyASTConsumer>(TheRewriter);
+  	TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
+    return llvm::make_unique<MyASTConsumer>(TheRewriter, CI);
   }
 
   bool overwriteChangedFiles() {
-	  return TheRewriter.overwriteChangedFiles();
+		std::set<std::pair<std::string, std::string> > filename_info_set;
+  	{
+  		for (auto  I = TheRewriter.buffer_begin(), E = TheRewriter.buffer_end(); I != E; ++I) {
+  			const FileEntry *Entry = TheRewriter.getSourceMgr().getFileEntryForID(I->first);
+
+  			std::string pathname = Entry->tryGetRealPathName();
+  			auto found_pos = pathname.find_last_of("/\\");
+  			std::string path;
+  			std::string filename;
+  			if (std::string::npos != found_pos) {
+  				path = pathname.substr(0, found_pos);
+  				if (pathname.length() > found_pos) {
+  					filename = pathname.substr(found_pos + 1);
+  				}
+  			} else {
+  				filename = pathname;
+  			}
+  			std::pair<std::string, std::string> item(path, filename);
+  			filename_info_set.insert(item);
+
+  			int q = 5;
+  		}
+  		std::set<std::pair<std::string, std::string> > unbackupable_filename_info_set;
+  		for (const auto& filename_info_ref : filename_info_set) {
+  			std::string backup_pathname = filename_info_ref.first + "/" + filename_info_ref.second + ".bak.tmp";
+  			std::string tmp_pathname = filename_info_ref.first + "/" + filename_info_ref.second + ".tmp";
+  			std::string src_pathname = filename_info_ref.first + "/" + filename_info_ref.second;
+
+  			std::ifstream src;
+  			src.open(src_pathname, std::ios::binary);
+  			std::ofstream dst;
+  			dst.open(tmp_pathname, std::ios::binary);
+  			if (((src.rdstate() & std::ifstream::failbit ) != 0)
+  					|| ((dst.rdstate() & std::ofstream::failbit ) != 0)) {
+  				unbackupable_filename_info_set.insert(filename_info_ref);
+  			} else {
+  				dst << src.rdbuf();
+  				src.close();
+  				dst.close();
+  				std::remove(backup_pathname.c_str());
+  				std::rename(src_pathname.c_str(), backup_pathname.c_str());
+  				std::rename(tmp_pathname.c_str(), src_pathname.c_str());
+  			}
+  		}
+  		for (const auto& filename_info_ref : unbackupable_filename_info_set) {
+  			filename_info_set.erase(filename_info_ref);
+  		}
+  	}
+
+    bool retval = TheRewriter.overwriteChangedFiles();
+
+  	{
+  		for (const auto& filename_info_ref : filename_info_set) {
+  			{
+  				std::string converted_version_filename = filename_info_ref.second + ".converted_" + std::to_string(s_source_file_action_num);
+  				std::string converted_version_pathname = filename_info_ref.first + "/" + converted_version_filename;
+  				std::string src_pathname = filename_info_ref.first + "/" + filename_info_ref.second;
+  				std::remove(converted_version_pathname.c_str());
+  				std::rename(src_pathname.c_str(), converted_version_pathname.c_str());
+  			}
+  			{
+    			std::string backup_filename = filename_info_ref.second + ".bak.tmp";
+    			std::string backup_pathname = filename_info_ref.first + "/" + backup_filename;
+  				std::string dst_pathname = filename_info_ref.first + "/" + filename_info_ref.second;
+  				//std::remove(dst_pathname.c_str());
+  				std::rename(backup_pathname.c_str(), dst_pathname.c_str());
+  			}
+  		}
+  	}
+
+  	return retval;
   }
 
 private:
   Rewriter TheRewriter;
+  static int s_source_file_action_num;
 };
+int MyFrontendAction::s_source_file_action_num = 0;
+
 /**********************************************************************************************************************/
 /*Main*/
 int main(int argc, const char **argv) 
 {
   CommonOptionsParser op(argc, argv, MatcherSampleCategory);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
+
+  std::shared_ptr<DiagnosticConsumer> diag_consumer_shptr(new IgnoringDiagConsumer());
+  Tool.setDiagnosticConsumer(diag_consumer_shptr.get());
+
+  Tool.buildASTs(Misc1::s_multi_tu_state_ref().ast_units);
 
   return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
