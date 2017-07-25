@@ -1,3 +1,7 @@
+This is an (older) snapshot of the mutator project for posterity. Up-to-date versions are [here](https://github.com/bloodstalker/mutator). This snapshot was built with the "trunk 307814" version of the llvm library.
+
+--------
+
 # mutator
 
 [![Build Status](https://travis-ci.org/bloodstalker/mutator.svg?branch=master)](https://travis-ci.org/bloodstalker/mutator)
