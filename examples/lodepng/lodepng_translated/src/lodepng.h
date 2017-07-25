@@ -115,8 +115,8 @@ colortype: the desired color type for the raw output image. See explanation on P
 bitdepth: the desired bit depth for the raw output image. See explanation on PNG color types.
 Return value: LodePNG error code (0 means no error).
 */
-unsigned lodepng_decode_memory(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_decode_memory(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h,
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                                LodePNGColorType colortype, unsigned bitdepth);
 
 /*Same as lodepng_decode_memory, but always decodes to 32-bit RGBA raw image*/
@@ -132,7 +132,7 @@ unsigned lodepng_decode24(unsigned char** out, unsigned* w, unsigned* h,
 Load PNG from disk, from file with given name.
 Same as the other decode functions, but instead takes a filename as input.
 */
-unsigned lodepng_decode_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h,
+unsigned lodepng_decode_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h,
                              const char* filename,
                              LodePNGColorType colortype, unsigned bitdepth);
 
@@ -164,8 +164,8 @@ colortype: the color type of the raw input image. See explanation on PNG color t
 bitdepth: the bit depth of the raw input image. See explanation on PNG color types.
 Return value: LodePNG error code (0 means no error).
 */
-unsigned lodepng_encode_memory(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+unsigned lodepng_encode_memory(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                                LodePNGColorType colortype, unsigned bitdepth);
 
 /*Same as lodepng_encode_memory, but always encodes from 32-bit RGBA raw image.*/
@@ -183,7 +183,7 @@ Same as the other encode functions, but instead takes a filename as output.
 NOTE: This overwrites existing files without warning!
 */
 unsigned lodepng_encode_file(const char* filename,
-                             mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+                             MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                              LodePNGColorType colortype, unsigned bitdepth);
 
 /*Same as lodepng_encode_file, but always encodes from 32-bit RGBA raw image.*/
@@ -204,7 +204,7 @@ namespace lodepng
 /*Same as lodepng_decode_memory, but decodes to an std::vector. The colortype
 is the format to output the pixels to. Default is RGBA 8-bit per channel.*/
 unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
 unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
                 const std::vector<unsigned char>& in,
@@ -224,7 +224,7 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
 /*Same as lodepng_encode_memory, but encodes to an std::vector. colortype
 is that of the raw input data. The output PNG color type will be auto chosen.*/
 unsigned encode(std::vector<unsigned char>& out,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
 unsigned encode(std::vector<unsigned char>& out,
                 const std::vector<unsigned char>& in, unsigned w, unsigned h,
@@ -236,7 +236,7 @@ Same as the other encode functions, but instead takes a filename as output.
 NOTE: This overwrites existing files without warning!
 */
 unsigned encode(const std::string& filename,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
 unsigned encode(const std::string& filename,
                 const std::vector<unsigned char>& in, unsigned w, unsigned h,
@@ -260,11 +260,11 @@ struct LodePNGDecompressSettings
   unsigned ignore_adler32; /*if 1, continue and don't give an error message if the Adler32 checksum is corrupted*/
 
   /*use custom zlib decoder instead of built in one (default: null)*/
-  std::function<unsigned int(mse::lh::TIPointerWithBundledVector<unsigned char> * , size_t* , mse::TNullableAnyRandomAccessIterator<const unsigned char> , size_t, const LodePNGDecompressSettings* )>  custom_zlib;
+  std::function<unsigned int(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) * , size_t* , MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char) , size_t, const LodePNGDecompressSettings* )>  custom_zlib;
   /*use custom deflate decoder instead of built in one (default: null)
   if custom_zlib is used, custom_deflate is ignored since only the built in
   zlib function will call custom_deflate*/
-  std::function<unsigned int(mse::lh::TIPointerWithBundledVector<unsigned char> * , size_t* , mse::TNullableAnyRandomAccessIterator<const unsigned char> , size_t, const LodePNGDecompressSettings* )>  custom_inflate;
+  std::function<unsigned int(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) * , size_t* , MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char) , size_t, const LodePNGDecompressSettings* )>  custom_inflate;
 
   const void* custom_context; /*optional custom settings for custom functions*/
 };
@@ -290,11 +290,11 @@ struct LodePNGCompressSettings /*deflate = compress*/
   unsigned lazymatching; /*use lazy matching: better compression but a bit slower. Default: true*/
 
   /*use custom zlib encoder instead of built in one (default: null)*/
-  std::function<unsigned int(mse::lh::TIPointerWithBundledVector<unsigned char> * , size_t* , mse::TNullableAnyRandomAccessIterator<const unsigned char> , size_t, const LodePNGCompressSettings* )>  custom_zlib;
+  std::function<unsigned int(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) * , size_t* , MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char) , size_t, const LodePNGCompressSettings* )>  custom_zlib;
   /*use custom deflate encoder instead of built in one (default: null)
   if custom_zlib is used, custom_deflate is ignored since only the built in
   zlib function will call custom_deflate*/
-  std::function<unsigned int(mse::lh::TIPointerWithBundledVector<unsigned char> * , size_t* , mse::TNullableAnyRandomAccessIterator<const unsigned char> , size_t, const LodePNGCompressSettings* )>  custom_deflate;
+  std::function<unsigned int(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) * , size_t* , MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char) , size_t, const LodePNGCompressSettings* )>  custom_deflate;
 
   const void* custom_context; /*optional custom settings for custom functions*/
 };
@@ -328,7 +328,7 @@ typedef struct LodePNGColorMode
 
   The palette is only supported for color type 3.
   */
-  mse::lh::TIPointerWithBundledVector<unsigned char>  palette; /*palette in RGBARGBA... order. When allocated, must be either 0, or have size 1024*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  palette; /*palette in RGBARGBA... order. When allocated, must be either 0, or have size 1024*/
   size_t palettesize; /*palette size in number of colors (amount of bytes is 4 * palettesize)*/
 
   /*
@@ -437,8 +437,8 @@ typedef struct LodePNGInfo
   correctly and use lodepng_add_text and lodepng_clear_text.
   */
   size_t text_num; /*the amount of texts in these char** buffers (there may be more texts in itext)*/
-  mse::lh::TIPointerWithBundledVector<char* >  text_keys; /*the keyword of a text chunk (e.g. "Comment")*/
-  mse::lh::TIPointerWithBundledVector<char* >  text_strings; /*the actual text*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  text_keys; /*the keyword of a text chunk (e.g. "Comment")*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  text_strings; /*the actual text*/
 
   /*
   international text chunks (iTXt)
@@ -446,10 +446,10 @@ typedef struct LodePNGInfo
   "langtags" and "transkeys".
   */
   size_t itext_num; /*the amount of international texts in this PNG*/
-  mse::lh::TIPointerWithBundledVector<char* >  itext_keys; /*the English keyword of the text chunk (e.g. "Comment")*/
-  mse::lh::TIPointerWithBundledVector<char* >  itext_langtags; /*language tag for this text's language, ISO/IEC 646 string, e.g. ISO 639 language tag*/
-  mse::lh::TIPointerWithBundledVector<char* >  itext_transkeys; /*keyword translated to the international language - UTF-8 string*/
-  mse::lh::TIPointerWithBundledVector<char* >  itext_strings; /*the actual international text - UTF-8 string*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  itext_keys; /*the English keyword of the text chunk (e.g. "Comment")*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  itext_langtags; /*language tag for this text's language, ISO/IEC 646 string, e.g. ISO 639 language tag*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  itext_transkeys; /*keyword translated to the international language - UTF-8 string*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  itext_strings; /*the actual international text - UTF-8 string*/
 
   /*time chunk (tIME)*/
   unsigned time_defined; /*set to 1 to make the encoder generate a tIME chunk*/
@@ -470,8 +470,8 @@ typedef struct LodePNGInfo
   Do not allocate or traverse this data yourself. Use the chunk traversing functions declared
   later, such as lodepng_chunk_next and lodepng_chunk_append, to read/write this struct.
   */
-  mse::lh::TNativeArrayReplacement<mse::lh::TIPointerWithBundledVector<unsigned char> , 3>  unknown_chunks_data;
-  mse::lh::TNativeArrayReplacement<size_t, 3>  unknown_chunks_size; /*size in bytes of the unknown chunks, given for protection*/
+  MSE_LH_FIXED_ARRAY_TYPE_PREFIX(3) MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(3)  unknown_chunks_data MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(3);
+  MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 3, unknown_chunks_size); /*size in bytes of the unknown chunks, given for protection*/
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
 } LodePNGInfo;
 
@@ -501,7 +501,7 @@ For < 8 bpp images, there should not be padding bits at the end of scanlines.
 For 16-bit per channel colors, uses big endian format like PNG does.
 Return value is LodePNG error code
 */
-unsigned lodepng_convert(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned lodepng_convert(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                          const LodePNGColorMode* mode_out, const LodePNGColorMode* mode_in,
                          unsigned w, unsigned h);
 
@@ -559,7 +559,7 @@ typedef struct LodePNGColorProfile
   unsigned short key_b;
   unsigned alpha; /*image is not opaque and alpha channel or alpha palette required*/
   unsigned numcolors; /*amount of colors, up to 257. Not valid if bits == 16.*/
-  mse::lh::TNativeArrayReplacement<unsigned char, 1024>  palette; /*Remembers up to the first 256 RGBA colors, in no particular order*/
+  MSE_LH_FIXED_ARRAY_DECLARATION(unsigned char, 1024, palette); /*Remembers up to the first 256 RGBA colors, in no particular order*/
   unsigned bits; /*bits per channel (not for palette). 1,2 or 4 for greyscale only. 16 if 16-bit per channel required.*/
 } LodePNGColorProfile;
 
@@ -567,12 +567,12 @@ void lodepng_color_profile_init(LodePNGColorProfile* profile);
 
 /*Get a LodePNGColorProfile of the image.*/
 unsigned lodepng_get_color_profile(LodePNGColorProfile* profile,
-                                   mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+                                   MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                                    const LodePNGColorMode* mode_in);
 /*The function LodePNG uses internally to decide the PNG color with auto_convert.
 Chooses an optimal color model, e.g. grey if only grey pixels, palette if < 256 colors, ...*/
 unsigned lodepng_auto_choose_color(LodePNGColorMode* mode_out,
-                                   mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+                                   MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                                    const LodePNGColorMode* mode_in);
 
 /*Settings for the encoder.*/
@@ -594,7 +594,7 @@ typedef struct LodePNGEncoderSettings
   the same length as the amount of scanlines in the image, and each value must <= 5. You
   have to cleanup this buffer, LodePNG will never free it. Don't forget that filter_palette_zero
   must be set to 0 to ensure this is also used on palette or low bitdepth images.*/
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  predefined_filters;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  predefined_filters;
 
   /*force creating a PLTE chunk if colortype is 2 or 6 (= a suggested palette).
   If colortype is 3, PLTE is _always_ created.*/
@@ -641,9 +641,9 @@ void lodepng_state_copy(LodePNGState* dest, const LodePNGState* source);
 Same as lodepng_decode_memory, but uses a LodePNGState to allow custom settings and
 getting much more information about the PNG image and color mode.
 */
-unsigned lodepng_decode(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h,
+unsigned lodepng_decode(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h,
                         LodePNGState* state,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize);
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize);
 
 /*
 Read the PNG header, but not the actual data. This returns only the information
@@ -652,14 +652,14 @@ information is placed in the info_png field of the LodePNGState.
 */
 unsigned lodepng_inspect(unsigned* w, unsigned* h,
                          LodePNGState* state,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize);
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize);
 #endif /*LODEPNG_COMPILE_DECODER*/
 
 
 #ifdef LODEPNG_COMPILE_ENCODER
 /*This function allocates the out buffer with standard malloc and stores the size in *outsize.*/
-unsigned lodepng_encode(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+unsigned lodepng_encode(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                         LodePNGState* state);
 #endif /*LODEPNG_COMPILE_ENCODER*/
 
@@ -680,16 +680,16 @@ Gets the length of the data of the chunk. Total chunk length has 12 bytes more.
 There must be at least 4 bytes to read from. If the result value is too large,
 it may be corrupt data.
 */
-unsigned lodepng_chunk_length(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+unsigned lodepng_chunk_length(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*puts the 4-byte type in null terminated string*/
-void lodepng_chunk_type(char type[5], mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+void lodepng_chunk_type(char type[5], MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*check if the type is the given type*/
-unsigned char lodepng_chunk_type_equals(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk, const char* type);
+unsigned char lodepng_chunk_type_equals(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk, const char* type);
 
 /*0: it's one of the critical chunk types, 1: it's an ancillary chunk (see PNG standard)*/
-unsigned char lodepng_chunk_ancillary(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+unsigned char lodepng_chunk_ancillary(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*0: public, 1: private (see PNG standard)*/
 unsigned char lodepng_chunk_private(const unsigned char* chunk);
@@ -699,24 +699,24 @@ unsigned char lodepng_chunk_safetocopy(const unsigned char* chunk);
 
 /*get pointer to the data of the chunk, where the input points to the header of the chunk*/
 unsigned char* lodepng_chunk_data(unsigned char* chunk);
-const mse::TNullableAnyRandomAccessIterator<const unsigned char>  lodepng_chunk_data_const(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_data_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*returns 0 if the crc is correct, 1 if it's incorrect (0 for OK as usual!)*/
-unsigned lodepng_chunk_check_crc(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+unsigned lodepng_chunk_check_crc(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*generates the correct CRC from the data and puts it in the last 4 bytes of the chunk*/
-void lodepng_chunk_generate_crc(mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk);
+void lodepng_chunk_generate_crc(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk);
 
 /*iterate to next chunks. don't use on IEND chunk, as there is no next chunk then*/
-mse::TNullableAnyRandomAccessIterator<unsigned char>  lodepng_chunk_next(mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk);
-const mse::TNullableAnyRandomAccessIterator<const unsigned char>  lodepng_chunk_next_const(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  lodepng_chunk_next(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk);
+const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*
 Appends chunk to the data in out. The given chunk should already have its chunk header.
 The out variable and outlength are updated to reflect the new reallocated buffer.
 Returns error code (0 if it went ok)
 */
-unsigned lodepng_chunk_append(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outlength, mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk);
+unsigned lodepng_chunk_append(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outlength, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
 
 /*
 Appends new chunk to out. The chunk to append is given by giving its length, type
@@ -724,12 +724,12 @@ and data separately. The type is a 4-letter string.
 The out variable and outlength are updated to reflect the new reallocated buffer.
 Returne error code (0 if it went ok)
 */
-unsigned lodepng_chunk_create(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outlength, unsigned length,
-                              const char* type, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data);
+unsigned lodepng_chunk_create(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outlength, unsigned length,
+                              const char* type, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data);
 
 
 /*Calculate CRC32 of buffer*/
-unsigned lodepng_crc32(mse::TNullableAnyRandomAccessIterator<const unsigned char>  buf, size_t len);
+unsigned lodepng_crc32(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  buf, size_t len);
 #endif /*LODEPNG_COMPILE_PNG*/
 
 
@@ -742,8 +742,8 @@ part of zlib that is required for PNG, it does not support dictionaries.
 
 #ifdef LODEPNG_COMPILE_DECODER
 /*Inflate a buffer. Inflate is the decompression step of deflate. Out buffer must be freed after use.*/
-unsigned lodepng_inflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_inflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                          const LodePNGDecompressSettings* settings);
 
 /*
@@ -752,8 +752,8 @@ data must be according to the zlib specification.
 Either, *out must be NULL and *outsize must be 0, or, *out must be a valid
 buffer and *outsize its size in bytes. out must be freed by user after usage.
 */
-unsigned lodepng_zlib_decompress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                                 mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_zlib_decompress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                                 MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                                  const LodePNGDecompressSettings* settings);
 #endif /*LODEPNG_COMPILE_DECODER*/
 
@@ -765,20 +765,20 @@ The data is output in the format of the zlib specification.
 Either, *out must be NULL and *outsize must be 0, or, *out must be a valid
 buffer and *outsize its size in bytes. out must be freed by user after usage.
 */
-unsigned lodepng_zlib_compress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_zlib_compress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                                const LodePNGCompressSettings* settings);
 
 /*
 Find length-limited Huffman code for given frequencies. This function is in the
 public interface only for tests, it's used internally by lodepng_deflate.
 */
-unsigned lodepng_huffman_code_lengths(mse::TNullableAnyRandomAccessIterator<unsigned int>  lengths, mse::TNullableAnyRandomAccessIterator<const unsigned int>  frequencies,
+unsigned lodepng_huffman_code_lengths(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned int)  lengths, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned int)  frequencies,
                                       size_t numcodes, unsigned maxbitlen);
 
 /*Compress a buffer with deflate. See RFC 1951. Out buffer must be freed after use.*/
-unsigned lodepng_deflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_deflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                          const LodePNGCompressSettings* settings);
 
 #endif /*LODEPNG_COMPILE_ENCODER*/
@@ -793,7 +793,7 @@ outsize: output parameter, size of the allocated out buffer
 filename: the path to the file to load
 return value: error code (0 means ok)
 */
-unsigned lodepng_load_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, const char* filename);
+unsigned lodepng_load_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, const char* filename);
 
 /*
 Save a file from buffer to disk. Warning, if it exists, this function overwrites
@@ -803,7 +803,7 @@ buffersize: size of the buffer to write
 filename: the path to the file to save to
 return value: error code (0 means ok)
 */
-unsigned lodepng_save_file(mse::TNullableAnyRandomAccessIterator<const unsigned char>  buffer, size_t buffersize, const char* filename);
+unsigned lodepng_save_file(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  buffer, size_t buffersize, const char* filename);
 #endif /*LODEPNG_COMPILE_DISK*/
 
 #ifdef LODEPNG_COMPILE_CPP
@@ -824,7 +824,7 @@ class State : public LodePNGState
 /* Same as other lodepng::decode, but using a State for more settings and information. */
 unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
                 State& state,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize);
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize);
 unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
                 State& state,
                 const std::vector<unsigned char>& in);
@@ -833,7 +833,7 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
 #ifdef LODEPNG_COMPILE_ENCODER
 /* Same as other lodepng::encode, but using a State for more settings and information. */
 unsigned encode(std::vector<unsigned char>& out,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 State& state);
 unsigned encode(std::vector<unsigned char>& out,
                 const std::vector<unsigned char>& in, unsigned w, unsigned h,
@@ -858,7 +858,7 @@ unsigned save_file(const std::vector<unsigned char>& buffer, const std::string& 
 #ifdef LODEPNG_COMPILE_ZLIB
 #ifdef LODEPNG_COMPILE_DECODER
 /* Zlib-decompress an unsigned char buffer */
-unsigned decompress(std::vector<unsigned char>& out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned decompress(std::vector<unsigned char>& out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                     const LodePNGDecompressSettings& settings = lodepng_default_decompress_settings);
 
 /* Zlib-decompress an std::vector */
@@ -868,7 +868,7 @@ unsigned decompress(std::vector<unsigned char>& out, const std::vector<unsigned 
 
 #ifdef LODEPNG_COMPILE_ENCODER
 /* Zlib-compress an unsigned char buffer */
-unsigned compress(std::vector<unsigned char>& out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned compress(std::vector<unsigned char>& out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                   const LodePNGCompressSettings& settings = lodepng_default_compress_settings);
 
 /* Zlib-compress an std::vector */

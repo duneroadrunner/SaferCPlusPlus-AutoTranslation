@@ -44,10 +44,10 @@ unsigned getChunkInfo(std::vector<std::string>& names, std::vector<size_t>& size
                       const std::vector<unsigned char>& png)
 {
   // Listing chunks is based on the original file, not the decoded png info.
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  begin; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  end; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  next;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  begin; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  end; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  next;
   end = &png.back() + 1;
   begin = chunk = &png.front() + 8;
 
@@ -73,10 +73,10 @@ unsigned getChunks(std::vector<std::string> names[3],
                    std::vector<std::vector<unsigned char> > chunks[3],
                    const std::vector<unsigned char>& png)
 {
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  next; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  begin; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  end;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  next; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  begin; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  end;
   end = &png.back() + 1;
   begin = chunk = &png.front() + 8;
 
@@ -124,10 +124,10 @@ mse::TNullableAnyRandomAccessIterator<const unsigned char>  end;
 unsigned insertChunks(std::vector<unsigned char>& png,
                       const std::vector<std::vector<unsigned char> > chunks[3])
 {
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  next; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  begin; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  end;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  next; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  begin; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  end;
   end = &png.back() + 1;
   begin = chunk = &png.front() + 8;
 
@@ -188,10 +188,10 @@ unsigned int h;
   if(error) return 1;
 
   //Read literal data from all IDAT chunks
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  begin; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  end; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  next;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  begin; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  end; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  next;
   end = &png.back() + 1;
   begin = chunk = &png.front() + 8;
 
@@ -205,7 +205,7 @@ mse::TNullableAnyRandomAccessIterator<const unsigned char>  next;
 
     if(std::string(type) == "IDAT")
     {
-      mse::TNullableAnyRandomAccessIterator<const unsigned char>  cdata = lodepng_chunk_data_const(chunk);
+      MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  cdata = lodepng_chunk_data_const(chunk);
       unsigned clength = lodepng_chunk_length(chunk);
       if(chunk + clength + 12 > end || clength > png.size() || chunk + clength + 12 < begin) {
         // corrupt chunk length
@@ -245,10 +245,10 @@ mse::TNullableAnyRandomAccessIterator<const unsigned char>  next;
   {
     //Interlaced
     filterTypes.resize(7);
-    static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_IX = { 0, 4, 0, 2, 0, 1, 0 }; /*x start values*/
-    static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_IY = { 0, 0, 4, 0, 2, 0, 1 }; /*y start values*/
-    static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_DX = { 8, 8, 4, 4, 2, 2, 1 }; /*x delta values*/
-    static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_DY = { 8, 8, 8, 4, 4, 2, 2 }; /*y delta values*/
+    static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_IX) = { 0, 4, 0, 2, 0, 1, 0 }; /*x start values*/
+    static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_IY) = { 0, 0, 4, 0, 2, 0, 1 }; /*y start values*/
+    static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_DX) = { 8, 8, 4, 4, 2, 2, 1 }; /*x delta values*/
+    static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_DY) = { 8, 8, 8, 4, 4, 2, 2 }; /*y delta values*/
     size_t pos = 0;
     for(size_t j = 0; j < 7; j++)
     {
@@ -298,7 +298,7 @@ unsigned int h;
   return 0; /* OK */
 }
 
-int getPaletteValue(mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t i, int bits)
+int getPaletteValue(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t i, int bits)
 {
   if(bits == 8) return data[i];
   else if(bits == 4) return (data[i / 2] >> ((i % 2) * 4)) & 15;
@@ -308,11 +308,11 @@ int getPaletteValue(mse::TNullableAnyRandomAccessIterator<const unsigned char>  
 }
 
 //This uses a stripped down version of picoPNG to extract detailed zlib information while decompressing.
-static mse::lh::TNativeArrayReplacement<unsigned long, 29>  LENBASE = {3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258};
-static mse::lh::TNativeArrayReplacement<unsigned long, 29>  LENEXTRA = {0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0};
-static mse::lh::TNativeArrayReplacement<unsigned long, 30>  DISTBASE = {1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577};
-static mse::lh::TNativeArrayReplacement<unsigned long, 30>  DISTEXTRA = {0,0,0,0,1,1,2, 2, 3, 3, 4, 4, 5, 5,  6,  6,  7,  7,  8,  8,   9,   9,  10,  10,  11,  11,  12,   12,   13,   13};
-static mse::lh::TNativeArrayReplacement<unsigned long, 19>  CLCL = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15}; //code length code lengths
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned long, 29, LENBASE) = {3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258};
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned long, 29, LENEXTRA) = {0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0};
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned long, 30, DISTBASE) = {1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577};
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned long, 30, DISTEXTRA) = {0,0,0,0,1,1,2, 2, 3, 3, 4, 4, 5, 5,  6,  6,  7,  7,  8,  8,   9,   9,  10,  10,  11,  11,  12,   12,   13,   13};
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned long, 19, CLCL) = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15}; //code length code lengths
 
 struct ExtractZlib // Zlib decompression and information extraction
 {
@@ -320,14 +320,14 @@ struct ExtractZlib // Zlib decompression and information extraction
   ExtractZlib(std::vector<ZlibBlockInfo>* info) : zlibinfo(info) {};
   int error;
 
-  unsigned long readBitFromStream(size_t& bitp, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bits)
+  unsigned long readBitFromStream(size_t& bitp, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bits)
   {
     unsigned long result = (bits[bitp >> 3] >> (bitp & 0x7)) & 1;
     bitp++;
     return result;
   }
 
-  unsigned long readBitsFromStream(size_t& bitp, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bits, size_t nbits)
+  unsigned long readBitsFromStream(size_t& bitp, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bits, size_t nbits)
   {
     unsigned long result = 0;
     for(size_t i = 0; i < nbits; i++) result += (readBitFromStream(bitp, bits)) << i;
@@ -428,7 +428,7 @@ std::vector<unsigned long> bitlenD(32, 5);;
   struct lodepng::ExtractZlib::HuffmanTree codetree; 
 struct lodepng::ExtractZlib::HuffmanTree codetreeD; 
 struct lodepng::ExtractZlib::HuffmanTree codelengthcodetree;
-  unsigned long huffmanDecodeSymbol(mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t& bp, const HuffmanTree& tree, size_t inlength)
+  unsigned long huffmanDecodeSymbol(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t& bp, const HuffmanTree& tree, size_t inlength)
   {
     //decode a single symbol from given list of bits with given code tree. return value is the symbol
     bool decoded; unsigned long ct;
@@ -442,7 +442,7 @@ struct lodepng::ExtractZlib::HuffmanTree codelengthcodetree;
   }
 
   void getTreeInflateDynamic(HuffmanTree& tree, HuffmanTree& treeD,
-                             mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t& bp, size_t inlength)
+                             MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t& bp, size_t inlength)
   {
     size_t bpstart = bp;
     //get the tree of a deflated block with dynamic tree, the tree itself is also Huffman compressed with a known tree
@@ -517,7 +517,7 @@ size_t replength;
   }
 
   void inflateHuffmanBlock(std::vector<unsigned char>& out,
-                           mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t& bp, size_t& pos, size_t inlength, unsigned long btype)
+                           MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t& bp, size_t& pos, size_t inlength, unsigned long btype)
   {
     size_t numcodes = 0; 
 size_t numlit = 0; 
@@ -575,7 +575,7 @@ size_t back = start - dist; //backwards
   }
 
   void inflateNoCompression(std::vector<unsigned char>& out,
-                            mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t& bp, size_t& pos, size_t inlength)
+                            MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t& bp, size_t& pos, size_t inlength)
   {
     while((bp & 0x7) != 0) bp++; //go to first boundary of byte
     size_t p = bp / 8;
@@ -614,7 +614,7 @@ struct ExtractPNG //PNG decoding and information extraction
   std::vector<ZlibBlockInfo>* zlibinfo;
   ExtractPNG(std::vector<ZlibBlockInfo>* info) : zlibinfo(info) {};
   int error;
-  void decode(mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t size)
+  void decode(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t size)
   {
     error = 0;
     if(size == 0 || !bool(in)) { error = 48; return; } //the given data is empty
@@ -656,7 +656,7 @@ struct ExtractPNG //PNG decoding and information extraction
   }
 
   //read the information from the header and store it in the Info
-  void readPngHeader(mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t inlength)
+  void readPngHeader(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t inlength)
   {
     if(inlength < 29) { error = 27; return; } //error: the data length is smaller than the length of the header
     if(in[0] != 137 || in[1] != 80 || in[2] != 78 || in[3] != 71
@@ -665,26 +665,26 @@ struct ExtractPNG //PNG decoding and information extraction
     if(in[12] != 'I' || in[13] != 'H' || in[14] != 'D' || in[15] != 'R') { error = 29; return; }
   }
 
-  unsigned long readBitFromReversedStream(size_t& bitp, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bits)
+  unsigned long readBitFromReversedStream(size_t& bitp, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bits)
   {
     unsigned long result = (bits[bitp >> 3] >> (7 - (bitp & 0x7))) & 1;
     bitp++;
     return result;
   }
 
-  unsigned long readBitsFromReversedStream(size_t& bitp, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bits, unsigned long nbits)
+  unsigned long readBitsFromReversedStream(size_t& bitp, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bits, unsigned long nbits)
   {
     unsigned long result = 0;
     for(size_t i = nbits - 1; i < nbits; i--) result += ((readBitFromReversedStream(bitp, bits)) << i);
     return result;
   }
 
-  void setBitOfReversedStream(size_t& bitp, mse::TNullableAnyRandomAccessIterator<unsigned char>  bits, unsigned long bit)
+  void setBitOfReversedStream(size_t& bitp, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  bits, unsigned long bit)
   {
     bits[bitp >> 3] |=  (bit << (7 - (bitp & 0x7))); bitp++;
   }
 
-  unsigned long read32bitInt(mse::TNullableAnyRandomAccessIterator<const unsigned char>  buffer)
+  unsigned long read32bitInt(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  buffer)
   {
     return (unsigned int)((buffer[0] << 24u) | (buffer[1] << 16u) | (buffer[2] << 8u) | buffer[3]);
   }

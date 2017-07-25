@@ -138,7 +138,7 @@ About uivector, ucvector and string:
 /*dynamic vector of unsigned ints*/
 typedef struct uivector
 {
-  mse::lh::TIPointerWithBundledVector<unsigned int>  data;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  data;
   size_t size; /*size in number of unsigned longs*/
   size_t allocsize; /*allocated size in bytes*/
 } uivector;
@@ -156,7 +156,7 @@ static unsigned uivector_reserve(uivector* p, size_t allocsize)
   if(allocsize > p->allocsize)
   {
     size_t newsize = (allocsize > p->allocsize * 2) ? allocsize : (allocsize * 3 / 2);
-    mse::lh::TIPointerWithBundledVector<unsigned int>  data = MSE_LH_REALLOC(unsigned int, p->data, newsize);
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  data = MSE_LH_REALLOC(unsigned int, p->data, newsize);
     if(data)
     {
       p->allocsize = newsize;
@@ -207,7 +207,7 @@ static unsigned uivector_push_back(uivector* p, unsigned c)
 /*dynamic vector of unsigned chars*/
 typedef struct ucvector
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  data;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data;
   size_t size; /*used size*/
   size_t allocsize; /*allocated size*/
 } ucvector;
@@ -218,7 +218,7 @@ static unsigned ucvector_reserve(ucvector* p, size_t allocsize)
   if(allocsize > p->allocsize)
   {
     size_t newsize = (allocsize > p->allocsize * 2) ? allocsize : (allocsize * 3 / 2);
-    mse::lh::TIPointerWithBundledVector<unsigned char>  data = MSE_LH_REALLOC(unsigned char, p->data, newsize);
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data = MSE_LH_REALLOC(unsigned char, p->data, newsize);
     if(data)
     {
       p->allocsize = newsize;
@@ -256,7 +256,7 @@ static void ucvector_init(ucvector* p)
 #ifdef LODEPNG_COMPILE_ZLIB
 /*you can both convert from vector to buffer&size and vica versa. If you use
 init_buffer to take over a buffer and size, it is not needed to use cleanup*/
-static void ucvector_init_buffer(ucvector* p, mse::lh::TIPointerWithBundledVector<unsigned char>  buffer, size_t size)
+static void ucvector_init_buffer(ucvector* p, MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer, size_t size)
 {
   p->data = buffer;
   p->allocsize = p->size = size;
@@ -321,14 +321,14 @@ size_t i;
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
-unsigned lodepng_read32bitInt(mse::TNullableAnyRandomAccessIterator<const unsigned char>  buffer)
+unsigned lodepng_read32bitInt(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  buffer)
 {
   return (unsigned)((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
 }
 
 #if defined(LODEPNG_COMPILE_PNG) || defined(LODEPNG_COMPILE_ENCODER)
 /*buffer must have at least 4 allocated bytes available*/
-static void lodepng_set32bitInt(mse::TNullableAnyRandomAccessIterator<unsigned char>  buffer, unsigned value)
+static void lodepng_set32bitInt(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  buffer, unsigned value)
 {
   buffer[0] = (unsigned char)((value >> 24) & 0xff);
   buffer[1] = (unsigned char)((value >> 16) & 0xff);
@@ -374,7 +374,7 @@ static long lodepng_filesize(const char* filename)
 }
 
 /* load file into buffer that already has the correct allocated size. Returns error code.*/
-static unsigned lodepng_buffer_file(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, size_t size, const char* filename)
+static unsigned lodepng_buffer_file(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, size_t size, const char* filename)
 {
   FILE* file;
   size_t readsize;
@@ -388,7 +388,7 @@ static unsigned lodepng_buffer_file(mse::TNullableAnyRandomAccessIterator<unsign
   return 0;
 }
 
-unsigned lodepng_load_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, const char* filename)
+unsigned lodepng_load_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, const char* filename)
 {
   long size = lodepng_filesize(filename);
   if (size < 0) return 78;
@@ -401,7 +401,7 @@ unsigned lodepng_load_file(mse::lh::TIPointerWithBundledVector<unsigned char> * 
 }
 
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
-unsigned lodepng_save_file(mse::TNullableAnyRandomAccessIterator<const unsigned char>  buffer, size_t buffersize, const char* filename)
+unsigned lodepng_save_file(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  buffer, size_t buffersize, const char* filename)
 {
   FILE* file;
   file = fopen(filename, "wb" );
@@ -448,14 +448,14 @@ static void addBitsToStreamReversed(size_t* bitpointer, ucvector* bitstream, uns
 
 #define READBIT(bitpointer, bitstream) ((bitstream[bitpointer >> 3] >> (bitpointer & 0x7)) & (unsigned char)1)
 
-static unsigned char readBitFromStream(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bitstream)
+static unsigned char readBitFromStream(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bitstream)
 {
   unsigned char result = (unsigned char)(READBIT(*bitpointer, bitstream));
   ++(*bitpointer);
   return result;
 }
 
-static unsigned readBitsFromStream(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bitstream, size_t nbits)
+static unsigned readBitsFromStream(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bitstream, size_t nbits)
 {
   unsigned int result = 0; 
 unsigned int i;
@@ -482,24 +482,24 @@ unsigned int i;
 #define NUM_CODE_LENGTH_CODES 19
 
 /*the base lengths represented by codes 257-285*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 29>  LENGTHBASE = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59,
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 29, LENGTHBASE) = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59,
      67, 83, 99, 115, 131, 163, 195, 227, 258};
 
 /*the extra bits used by codes 257-285 (added to base length)*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 29>  LENGTHEXTRA = {0, 0, 0, 0, 0, 0, 0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 29, LENGTHEXTRA) = {0, 0, 0, 0, 0, 0, 0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,
       4,  4,  4,   4,   5,   5,   5,   5,   0};
 
 /*the base backwards distances (the bits of distance codes appear after length codes and use their own huffman tree)*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 30>  DISTANCEBASE = {1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513,
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 30, DISTANCEBASE) = {1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513,
      769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
 
 /*the extra bits of backwards distances (added to base)*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 30>  DISTANCEEXTRA = {0, 0, 0, 0, 1, 1, 2,  2,  3,  3,  4,  4,  5,  5,   6,   6,   7,   7,   8,
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 30, DISTANCEEXTRA) = {0, 0, 0, 0, 1, 1, 2,  2,  3,  3,  4,  4,  5,  5,   6,   6,   7,   7,   8,
        8,    9,    9,   10,   10,   11,   11,   12,    12,    13,    13};
 
 /*the order in which "code length alphabet code lengths" are stored, out of this
 the huffman tree of the dynamic huffman tree lengths is generated*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 19>  CLCL_ORDER = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 19, CLCL_ORDER) = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
@@ -508,9 +508,9 @@ Huffman tree struct, containing multiple representations of the tree
 */
 typedef struct HuffmanTree
 {
-  mse::lh::TIPointerWithBundledVector<unsigned int>  tree2d;
-  mse::lh::TIPointerWithBundledVector<unsigned int>  tree1d;
-  mse::lh::TIPointerWithBundledVector<unsigned int>  lengths; /*the lengths of the codes of the 1d-tree*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  tree2d;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  tree1d;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  lengths; /*the lengths of the codes of the 1d-tree*/
   unsigned maxbitlen; /*maximum number of bits a single code can get*/
   unsigned numcodes; /*number of symbols in the alphabet = number of codes*/
 } HuffmanTree;
@@ -655,7 +655,7 @@ given the code lengths (as stored in the PNG file), generate the tree as defined
 by Deflate. maxbitlen is the maximum bits that a code in the tree can have.
 return value is error.
 */
-static unsigned HuffmanTree_makeFromLengths(HuffmanTree* tree, mse::TNullableAnyRandomAccessIterator<const unsigned int>  bitlen,
+static unsigned HuffmanTree_makeFromLengths(HuffmanTree* tree, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned int)  bitlen,
                                             size_t numcodes, unsigned maxbitlen)
 {
   unsigned i;
@@ -677,7 +677,7 @@ typedef struct BPMNode
 {
   int weight; /*the sum of all weights in this chain*/
   unsigned index; /*index of this leaf node (called "count" in the paper)*/
-  mse::TNullableAnyRandomAccessIterator<struct BPMNode>  tail; /*the next nodes in this chain (null if last)*/
+  MSE_LH_ARRAY_ITERATOR_TYPE(struct BPMNode)  tail; /*the next nodes in this chain (null if last)*/
   int in_use;
 } BPMNode;
 
@@ -686,21 +686,21 @@ typedef struct BPMLists
 {
   /*memory pool*/
   unsigned memsize;
-  mse::lh::TIPointerWithBundledVector<BPMNode>  memory;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(BPMNode)  memory;
   unsigned numfree;
   unsigned nextfree;
-  mse::lh::TIPointerWithBundledVector<mse::TNullableAnyRandomAccessIterator<BPMNode> >  freelist;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode) )  freelist;
   /*two heads of lookahead chains per list*/
   unsigned listsize;
-  mse::lh::TIPointerWithBundledVector<mse::TNullableAnyRandomAccessIterator<BPMNode> >  chains0;
-  mse::lh::TIPointerWithBundledVector<mse::TNullableAnyRandomAccessIterator<BPMNode> >  chains1;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode) )  chains0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode) )  chains1;
 } BPMLists;
 
 /*creates a new chain node with the given parameters, from the memory in the lists */
-static mse::TNullableAnyRandomAccessIterator<BPMNode>  bpmnode_create(BPMLists* lists, int weight, unsigned index, mse::TNullableAnyRandomAccessIterator<BPMNode>  tail)
+static MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  bpmnode_create(BPMLists* lists, int weight, unsigned index, MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  tail)
 {
   unsigned i;
-  mse::TNullableAnyRandomAccessIterator<BPMNode>  result;
+  MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  result;
 
   /*memory full, so garbage collect*/
   if(lists->nextfree >= lists->numfree)
@@ -709,7 +709,7 @@ static mse::TNullableAnyRandomAccessIterator<BPMNode>  bpmnode_create(BPMLists* 
     for(i = 0; i != lists->memsize; ++i) lists->memory[i].in_use = 0;
     for(i = 0; i != lists->listsize; ++i)
     {
-      mse::TNullableAnyRandomAccessIterator<BPMNode>  node;
+      MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  node;
       for(node = lists->chains0[i]; bool(node); node = node->tail) node->in_use = 1;
       for(node = lists->chains1[i]; bool(node); node = node->tail) node->in_use = 1;
     }
@@ -730,15 +730,15 @@ static mse::TNullableAnyRandomAccessIterator<BPMNode>  bpmnode_create(BPMLists* 
 }
 
 /*sort the leaves with stable mergesort*/
-static void bpmnode_sort(mse::TNullableAnyRandomAccessIterator<BPMNode>  leaves, size_t num)
+static void bpmnode_sort(MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  leaves, size_t num)
 {
-  mse::lh::TIPointerWithBundledVector<BPMNode>  mem((sizeof(*leaves) * num) / sizeof(BPMNode));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(BPMNode)  mem = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(BPMNode), sizeof(*leaves) * num);
   size_t width; 
 size_t counter = 0;
   for(width = 1; width < num; width *= 2)
   {
-    mse::TNullableAnyRandomAccessIterator<BPMNode>  a = (counter & 1) ? mse::TNullableAnyRandomAccessIterator<BPMNode >(mem) : leaves;
-    mse::TNullableAnyRandomAccessIterator<BPMNode>  b = (counter & 1) ? leaves : mse::TNullableAnyRandomAccessIterator<BPMNode >(mem);
+    MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  a = (counter & 1) ? mse::TNullableAnyRandomAccessIterator<BPMNode >(mem) : leaves;
+    MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  b = (counter & 1) ? leaves : mse::TNullableAnyRandomAccessIterator<BPMNode >(mem);
     size_t p;
     for(p = 0; p < num; p += 2 * width)
     {
@@ -760,7 +760,7 @@ size_t k;
 }
 
 /*Boundary Package Merge step, numpresent is the amount of leaves, and c is the current chain.*/
-static void boundaryPM(BPMLists* lists, mse::TNullableAnyRandomAccessIterator<BPMNode>  leaves, size_t numpresent, int c, int num)
+static void boundaryPM(BPMLists* lists, MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  leaves, size_t numpresent, int c, int num)
 {
   unsigned lastindex = lists->chains1[c]->index;
 
@@ -791,13 +791,13 @@ static void boundaryPM(BPMLists* lists, mse::TNullableAnyRandomAccessIterator<BP
   }
 }
 
-unsigned lodepng_huffman_code_lengths(mse::TNullableAnyRandomAccessIterator<unsigned int>  lengths, mse::TNullableAnyRandomAccessIterator<const unsigned int>  frequencies,
+unsigned lodepng_huffman_code_lengths(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned int)  lengths, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned int)  frequencies,
                                       size_t numcodes, unsigned maxbitlen)
 {
   unsigned error = 0;
   unsigned i;
   size_t numpresent = 0; /*number of symbols with non-zero frequency*/
-  mse::lh::TIPointerWithBundledVector<BPMNode>  leaves; /*the symbols, only those with > 0 frequency*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(BPMNode)  leaves; /*the symbols, only those with > 0 frequency*/
 
   if(numcodes == 0) return 80; /*error: a tree of 0 symbols is not supposed to be made*/
   if((1u << maxbitlen) < numcodes) return 80; /*error: represent all symbols*/
@@ -834,7 +834,7 @@ unsigned lodepng_huffman_code_lengths(mse::TNullableAnyRandomAccessIterator<unsi
   else
   {
     BPMLists lists;
-    mse::TNullableAnyRandomAccessIterator<BPMNode>  node;
+    MSE_LH_ARRAY_ITERATOR_TYPE(BPMNode)  node;
 
     bpmnode_sort(leaves, numpresent);
 
@@ -881,7 +881,7 @@ unsigned lodepng_huffman_code_lengths(mse::TNullableAnyRandomAccessIterator<unsi
 }
 
 /*Create the Huffman tree given the symbol frequencies*/
-static unsigned HuffmanTree_makeFromFrequencies(HuffmanTree* tree, mse::TNullableAnyRandomAccessIterator<const unsigned int>  frequencies,
+static unsigned HuffmanTree_makeFromFrequencies(HuffmanTree* tree, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned int)  frequencies,
                                                 size_t mincodes, size_t numcodes, unsigned maxbitlen)
 {
   unsigned error = 0;
@@ -914,7 +914,7 @@ static unsigned generateFixedLitLenTree(HuffmanTree* tree)
 {
   unsigned int i; 
 unsigned int error = 0;
-  mse::lh::TIPointerWithBundledVector<unsigned int>  bitlen((NUM_DEFLATE_CODE_SYMBOLS * sizeof(unsigned)) / sizeof(unsigned int));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  bitlen = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int), NUM_DEFLATE_CODE_SYMBOLS * sizeof(unsigned));
   if(!bitlen) return 83; /*alloc fail*/
 
   /*288 possible codes: 0-255=literals, 256=endcode, 257-285=lengthcodes, 286-287=unused*/
@@ -934,7 +934,7 @@ static unsigned generateFixedDistanceTree(HuffmanTree* tree)
 {
   unsigned int i; 
 unsigned int error = 0;
-  mse::lh::TIPointerWithBundledVector<unsigned int>  bitlen((NUM_DISTANCE_SYMBOLS * sizeof(unsigned)) / sizeof(unsigned int));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  bitlen = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int), NUM_DISTANCE_SYMBOLS * sizeof(unsigned));
   if(!bitlen) return 83; /*alloc fail*/
 
   /*there are 32 distance codes, but 30-31 are unused*/
@@ -951,7 +951,7 @@ unsigned int error = 0;
 returns the code, or (unsigned)(-1) if error happened
 inbitlength is the length of the complete buffer, in bits (so its byte length times 8)
 */
-static unsigned huffmanDecodeSymbol(mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t* bp,
+static unsigned huffmanDecodeSymbol(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t* bp,
                                     const HuffmanTree* codetree, size_t inbitlength)
 {
   unsigned int treepos = 0; 
@@ -989,7 +989,7 @@ static void getTreeInflateFixed(HuffmanTree* tree_ll, HuffmanTree* tree_d)
 
 /*get the tree of a deflated block with dynamic tree, the tree itself is also Huffman compressed with a known tree*/
 static unsigned getTreeInflateDynamic(HuffmanTree* tree_ll, HuffmanTree* tree_d,
-                                      mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t* bp, size_t inlength)
+                                      MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t* bp, size_t inlength)
 {
   /*make sure that length values that aren't filled in will be 0, or a wrong tree will be generated*/
   unsigned error = 0;
@@ -1001,10 +1001,10 @@ unsigned int i;
   size_t inbitlength = inlength * 8;
 
   /*see comments in deflateDynamic for explanation of the context and these variables, it is analogous*/
-  mse::lh::TIPointerWithBundledVector<unsigned int>  bitlen_ll = 0; /*lit,len code lengths*/
-  mse::lh::TIPointerWithBundledVector<unsigned int>  bitlen_d = 0; /*dist code lengths*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  bitlen_ll = 0; /*lit,len code lengths*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  bitlen_d = 0; /*dist code lengths*/
   /*code length code lengths ("clcl"), the bit lengths of the huffman tree used to compress bitlen_ll and bitlen_d*/
-  mse::lh::TIPointerWithBundledVector<unsigned int>  bitlen_cl = 0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned int)  bitlen_cl = 0;
   HuffmanTree tree_cl; /*the code tree for code length codes (the huffman tree for compressed huffman trees)*/
 
   if((*bp) + 14 > (inlength << 3)) return 49; /*error: the bit pointer is or will go past the memory*/
@@ -1140,7 +1140,7 @@ unsigned int i;
 }
 
 /*inflate a block with dynamic of fixed Huffman tree*/
-static unsigned inflateHuffmanBlock(ucvector* out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t* bp,
+static unsigned inflateHuffmanBlock(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t* bp,
                                     size_t* pos, size_t inlength, unsigned btype)
 {
   unsigned error = 0;
@@ -1239,7 +1239,7 @@ size_t length;
   return error;
 }
 
-static unsigned inflateNoCompression(ucvector* out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t* bp, size_t* pos, size_t inlength)
+static unsigned inflateNoCompression(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t* bp, size_t* pos, size_t inlength)
 {
   size_t p;
   unsigned int LEN; 
@@ -1271,7 +1271,7 @@ unsigned int error = 0;
 }
 
 static unsigned lodepng_inflatev(ucvector* out,
-                                 mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+                                 MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                                  const LodePNGDecompressSettings* settings)
 {
   /*bit pointer in the "in" data, current byte is bp >> 3, current bit is bp & 0x7 (from lsb to msb of the byte)*/
@@ -1300,8 +1300,8 @@ static unsigned lodepng_inflatev(ucvector* out,
   return error;
 }
 
-unsigned lodepng_inflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_inflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                          const LodePNGDecompressSettings* settings)
 {
   unsigned error;
@@ -1313,8 +1313,8 @@ unsigned lodepng_inflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  o
   return error;
 }
 
-static unsigned inflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+static unsigned inflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                         const LodePNGDecompressSettings* settings)
 {
   if(settings->custom_inflate)
@@ -1345,7 +1345,7 @@ static void addHuffmanSymbol(size_t* bp, ucvector* compressed, unsigned code, un
 
 /*search the index in the array, that has the largest value smaller than or equal to the given value,
 given array must be sorted (if no value is smaller, it returns the size of the given array)*/
-static size_t searchCodeIndex(mse::TNullableAnyRandomAccessIterator<const unsigned int>  array, size_t array_size, size_t value)
+static size_t searchCodeIndex(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned int)  array, size_t array_size, size_t value)
 {
   /*binary search (only small gain over linear). TODO: use CPU log2 instruction for getting symbols instead*/
   size_t left = 1;
@@ -1386,16 +1386,16 @@ static const unsigned HASH_BIT_MASK = 65535; /*HASH_NUM_VALUES - 1, but C90 does
 
 typedef struct Hash
 {
-  mse::lh::TIPointerWithBundledVector<int>  head; /*hash value to head circular pos - can be outdated if went around window*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(int)  head; /*hash value to head circular pos - can be outdated if went around window*/
   /*circular pos to prev circular pos*/
-  mse::lh::TIPointerWithBundledVector<unsigned short>  chain;
-  mse::lh::TIPointerWithBundledVector<int>  val; /*circular pos to hash value*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned short)  chain;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(int)  val; /*circular pos to hash value*/
 
   /*TODO: do this not only for zeros but for any repeated byte. However for PNG
   it's always going to be the zeros that dominate, so not important for PNG*/
-  mse::lh::TIPointerWithBundledVector<int>  headz; /*similar to head, but for chainz*/
-  mse::lh::TIPointerWithBundledVector<unsigned short>  chainz; /*those with same amount of zeros*/
-  mse::lh::TIPointerWithBundledVector<unsigned short>  zeros; /*length of zeros streak, used as a second hash chain*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(int)  headz; /*similar to head, but for chainz*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned short)  chainz; /*those with same amount of zeros*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned short)  zeros; /*length of zeros streak, used as a second hash chain*/
 } Hash;
 
 static unsigned hash_init(Hash* hash, unsigned windowsize)
@@ -1438,7 +1438,7 @@ static void hash_cleanup(Hash* hash)
 
 
 
-static unsigned getHash(mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t size, size_t pos)
+static unsigned getHash(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t size, size_t pos)
 {
   unsigned result = 0;
   if(pos + 2 < size)
@@ -1460,10 +1460,10 @@ size_t i;
   return result & HASH_BIT_MASK;
 }
 
-static unsigned countZeros(mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t size, size_t pos)
+static unsigned countZeros(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t size, size_t pos)
 {
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  start = data + pos;
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  end = start + MAX_SUPPORTED_DEFLATE_LENGTH;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  start = data + pos;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  end = start + MAX_SUPPORTED_DEFLATE_LENGTH;
   if(end > data + size) end = data + size;
   data = start;
   while(data != end && *data == 0) ++data;
@@ -1493,7 +1493,7 @@ the "dictionary". A brute force search through all possible distances would be s
 this hash technique is one out of several ways to speed this up.
 */
 static unsigned encodeLZ77(uivector* out, Hash* hash,
-                           mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t inpos, size_t insize, unsigned windowsize,
+                           MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t inpos, size_t insize, unsigned windowsize,
                            unsigned minmatch, unsigned nicematch, unsigned lazymatching)
 {
   size_t pos;
@@ -1515,9 +1515,9 @@ unsigned int lazyoffset = 0;
   unsigned int current_offset; 
 unsigned int current_length;
   unsigned prev_offset;
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  lastptr; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  foreptr; 
-mse::TNullableAnyRandomAccessIterator<const unsigned char>  backptr;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lastptr; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  foreptr; 
+MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  backptr;
   unsigned hashpos;
 
   if(windowsize == 0 || windowsize > 32768) return 60; /*error: windowsize smaller/larger than allowed*/
@@ -1676,7 +1676,7 @@ mse::TNullableAnyRandomAccessIterator<const unsigned char>  backptr;
 
 /* /////////////////////////////////////////////////////////////////////////// */
 
-static unsigned deflateNoCompression(ucvector* out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t datasize)
+static unsigned deflateNoCompression(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t datasize)
 {
   /*non compressed deflate block data: 1 bit BFINAL,2 bits BTYPE,(5 bits): it jumps to start of next byte,
   2 bytes LEN, 2 bytes NLEN, LEN bytes literal DATA*/
@@ -1753,7 +1753,7 @@ static void writeLZ77data(size_t* bp, ucvector* out, const uivector* lz77_encode
 
 /*Deflate for a block of type "dynamic", that is, with freely, optimally, created huffman trees*/
 static unsigned deflateDynamic(ucvector* out, size_t* bp, Hash* hash,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t datapos, size_t dataend,
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t datapos, size_t dataend,
                                const LodePNGCompressSettings* settings, unsigned final)
 {
   unsigned error = 0;
@@ -2003,7 +2003,7 @@ unsigned int rest = j % 6;
 }
 
 static unsigned deflateFixed(ucvector* out, size_t* bp, Hash* hash,
-                             mse::TNullableAnyRandomAccessIterator<const unsigned char>  data,
+                             MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data,
                              size_t datapos, size_t dataend,
                              const LodePNGCompressSettings* settings, unsigned final)
 {
@@ -2050,7 +2050,7 @@ static unsigned deflateFixed(ucvector* out, size_t* bp, Hash* hash,
   return error;
 }
 
-static unsigned lodepng_deflatev(ucvector* out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+static unsigned lodepng_deflatev(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                                  const LodePNGCompressSettings* settings)
 {
   unsigned error = 0;
@@ -2093,8 +2093,8 @@ size_t numdeflateblocks;
   return error;
 }
 
-unsigned lodepng_deflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned lodepng_deflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                          const LodePNGCompressSettings* settings)
 {
   unsigned error;
@@ -2106,8 +2106,8 @@ unsigned lodepng_deflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  o
   return error;
 }
 
-static unsigned deflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+static unsigned deflate(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                         const LodePNGCompressSettings* settings)
 {
   if(settings->custom_deflate)
@@ -2126,7 +2126,7 @@ static unsigned deflate(mse::lh::TIPointerWithBundledVector<unsigned char> *  ou
 /* / Adler32                                                                  */
 /* ////////////////////////////////////////////////////////////////////////// */
 
-static unsigned update_adler32(unsigned adler, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, unsigned len)
+static unsigned update_adler32(unsigned adler, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, unsigned len)
 {
    unsigned s1 = adler & 0xffff;
    unsigned s2 = (adler >> 16) & 0xffff;
@@ -2150,7 +2150,7 @@ static unsigned update_adler32(unsigned adler, mse::TNullableAnyRandomAccessIter
 }
 
 /*Return the adler32 of the bytes data[0..len-1]*/
-static unsigned adler32(mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, unsigned len)
+static unsigned adler32(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, unsigned len)
 {
   return update_adler32(1L, data, len);
 }
@@ -2161,7 +2161,7 @@ static unsigned adler32(mse::TNullableAnyRandomAccessIterator<const unsigned cha
 
 #ifdef LODEPNG_COMPILE_DECODER
 
-unsigned lodepng_zlib_decompress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned lodepng_zlib_decompress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                  size_t insize, const LodePNGDecompressSettings* settings)
 {
   unsigned error = 0;
@@ -2208,7 +2208,7 @@ unsigned int FDICT;
   return 0; /*no error*/
 }
 
-static unsigned zlib_decompress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static unsigned zlib_decompress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                 size_t insize, const LodePNGDecompressSettings* settings)
 {
   if(settings->custom_zlib)
@@ -2225,7 +2225,7 @@ static unsigned zlib_decompress(mse::lh::TIPointerWithBundledVector<unsigned cha
 
 #ifdef LODEPNG_COMPILE_ENCODER
 
-unsigned lodepng_zlib_compress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned lodepng_zlib_compress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                size_t insize, const LodePNGCompressSettings* settings)
 {
   /*initially, *out must be NULL and outsize 0, if you just give some random *out
@@ -2233,7 +2233,7 @@ unsigned lodepng_zlib_compress(mse::lh::TIPointerWithBundledVector<unsigned char
   ucvector outv;
   size_t i;
   unsigned error;
-  mse::lh::TIPointerWithBundledVector<unsigned char>  deflatedata = 0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  deflatedata = 0;
   size_t deflatesize = 0;
 
   /*zlib data: 1 byte CMF (CM+CINFO), 1 byte FLG, deflate data, 4 byte ADLER32 checksum of the Decompressed data*/
@@ -2267,7 +2267,7 @@ unsigned lodepng_zlib_compress(mse::lh::TIPointerWithBundledVector<unsigned char
 }
 
 /* compress using the default or custom zlib function */
-static unsigned zlib_compress(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static unsigned zlib_compress(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                               size_t insize, const LodePNGCompressSettings* settings)
 {
   if(settings->custom_zlib)
@@ -2360,7 +2360,7 @@ const LodePNGDecompressSettings lodepng_default_decompress_settings = {0, 0, 0, 
 
 #ifndef LODEPNG_NO_COMPILE_CRC
 /* CRC polynomial: 0xedb88320 */
-static mse::lh::TNativeArrayReplacement<unsigned int, 256>  lodepng_crc32_table = {
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 256, lodepng_crc32_table) = {
            0u, 1996959894u, 3993919788u, 2567524794u,  124634137u, 1886057615u, 3915621685u, 2657392035u,
    249268274u, 2044508324u, 3772115230u, 2547177864u,  162941995u, 2125561021u, 3887607047u, 2428444049u,
    498536548u, 1789927666u, 4089016648u, 2227061214u,  450548861u, 1843258603u, 4107580753u, 2211677639u,
@@ -2396,7 +2396,7 @@ static mse::lh::TNativeArrayReplacement<unsigned int, 256>  lodepng_crc32_table 
 };
 
 /*Return the CRC of the bytes buf[0..len-1].*/
-unsigned lodepng_crc32(mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t length)
+unsigned lodepng_crc32(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t length)
 {
   unsigned r = 0xffffffffu;
   size_t i;
@@ -2414,14 +2414,14 @@ unsigned lodepng_crc32(const unsigned char* data, size_t length);
 /* / Reading and writing single bits and bytes from/to stream for LodePNG   / */
 /* ////////////////////////////////////////////////////////////////////////// */
 
-static unsigned char readBitFromReversedStream(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bitstream)
+static unsigned char readBitFromReversedStream(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bitstream)
 {
   unsigned char result = (unsigned char)((bitstream[(*bitpointer) >> 3] >> (7 - ((*bitpointer) & 0x7))) & 1);
   ++(*bitpointer);
   return result;
 }
 
-static unsigned readBitsFromReversedStream(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<const unsigned char>  bitstream, size_t nbits)
+static unsigned readBitsFromReversedStream(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  bitstream, size_t nbits)
 {
   unsigned result = 0;
   size_t i;
@@ -2434,7 +2434,7 @@ static unsigned readBitsFromReversedStream(size_t* bitpointer, mse::TNullableAny
 }
 
 #ifdef LODEPNG_COMPILE_DECODER
-static void setBitOfReversedStream0(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<unsigned char>  bitstream, unsigned char bit)
+static void setBitOfReversedStream0(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  bitstream, unsigned char bit)
 {
   /*the current bit in bitstream must be 0 for this to work*/
   if(bit)
@@ -2446,7 +2446,7 @@ static void setBitOfReversedStream0(size_t* bitpointer, mse::TNullableAnyRandomA
 }
 #endif /*LODEPNG_COMPILE_DECODER*/
 
-static void setBitOfReversedStream(size_t* bitpointer, mse::TNullableAnyRandomAccessIterator<unsigned char>  bitstream, unsigned char bit)
+static void setBitOfReversedStream(size_t* bitpointer, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  bitstream, unsigned char bit)
 {
   /*the current bit in bitstream may be 0 or 1 for this to work*/
   if(bit == 0) bitstream[(*bitpointer) >> 3] &=  (unsigned char)(~(1 << (7 - ((*bitpointer) & 0x7))));
@@ -2458,50 +2458,50 @@ static void setBitOfReversedStream(size_t* bitpointer, mse::TNullableAnyRandomAc
 /* / PNG chunks                                                             / */
 /* ////////////////////////////////////////////////////////////////////////// */
 
-unsigned lodepng_chunk_length(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned lodepng_chunk_length(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   return lodepng_read32bitInt(((chunk) + (0)));
 }
 
-void lodepng_chunk_type(char type[5], mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+void lodepng_chunk_type(char type[5], MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   unsigned i;
   for(i = 0; i != 4; ++i) type[i] = (char)chunk[4 + i];
   type[4] = 0; /*null termination char*/
 }
 
-unsigned char lodepng_chunk_type_equals(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk, const char* type)
+unsigned char lodepng_chunk_type_equals(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk, const char* type)
 {
   if(strlen(type) != 4) return 0;
   return (chunk[4] == type[0] && chunk[5] == type[1] && chunk[6] == type[2] && chunk[7] == type[3]);
 }
 
-unsigned char lodepng_chunk_ancillary(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned char lodepng_chunk_ancillary(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   return((chunk[4] & 32) != 0);
 }
 
-unsigned char lodepng_chunk_private(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned char lodepng_chunk_private(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   return((chunk[6] & 32) != 0);
 }
 
-unsigned char lodepng_chunk_safetocopy(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned char lodepng_chunk_safetocopy(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   return((chunk[7] & 32) != 0);
 }
 
-unsigned char* lodepng_chunk_data(mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk)
+unsigned char* lodepng_chunk_data(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk)
 {
   return &chunk[8];
 }
 
-const mse::TNullableAnyRandomAccessIterator<const unsigned char>  lodepng_chunk_data_const(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_data_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   return ((chunk) + (8));
 }
 
-unsigned lodepng_chunk_check_crc(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned lodepng_chunk_check_crc(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   unsigned length = lodepng_chunk_length(chunk);
   unsigned CRC = lodepng_read32bitInt(((chunk) + (length + 8)));
@@ -2511,31 +2511,31 @@ unsigned lodepng_chunk_check_crc(mse::TNullableAnyRandomAccessIterator<const uns
   else return 0;
 }
 
-void lodepng_chunk_generate_crc(mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk)
+void lodepng_chunk_generate_crc(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk)
 {
   unsigned length = lodepng_chunk_length(chunk);
   unsigned CRC = lodepng_crc32(((chunk) + (4)), length + 4);
   lodepng_set32bitInt(chunk + 8 + length, CRC);
 }
 
-mse::TNullableAnyRandomAccessIterator<unsigned char>  lodepng_chunk_next(mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk)
+MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  lodepng_chunk_next(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk)
 {
   unsigned total_chunk_length = lodepng_chunk_length(chunk) + 12;
   return ((chunk) + (total_chunk_length));
 }
 
-const mse::TNullableAnyRandomAccessIterator<const unsigned char>  lodepng_chunk_next_const(mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   unsigned total_chunk_length = lodepng_chunk_length(chunk) + 12;
   return ((chunk) + (total_chunk_length));
 }
 
-unsigned lodepng_chunk_append(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outlength, mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk)
+unsigned lodepng_chunk_append(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outlength, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk)
 {
   unsigned i;
   unsigned total_chunk_length = lodepng_chunk_length(chunk) + 12;
-  mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk_start; 
-mse::lh::TIPointerWithBundledVector<unsigned char>  new_buffer;
+  MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk_start; 
+MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  new_buffer;
   size_t new_length = (*outlength) + total_chunk_length;
   if(new_length < total_chunk_length || new_length < (*outlength)) return 77; /*integer overflow happened*/
 
@@ -2550,12 +2550,12 @@ mse::lh::TIPointerWithBundledVector<unsigned char>  new_buffer;
   return 0;
 }
 
-unsigned lodepng_chunk_create(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outlength, unsigned length,
-                              const char* type, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data)
+unsigned lodepng_chunk_create(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outlength, unsigned length,
+                              const char* type, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data)
 {
   unsigned i;
-  mse::TNullableAnyRandomAccessIterator<unsigned char>  chunk; 
-mse::lh::TIPointerWithBundledVector<unsigned char>  new_buffer;
+  MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk; 
+MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  new_buffer;
   size_t new_length = (*outlength) + length + 12;
   if(new_length < length + 12 || new_length < (*outlength)) return 77; /*integer overflow happened*/
   MSE_LH_REALLOC(unsigned char, new_buffer, new_length);
@@ -2686,7 +2686,7 @@ void lodepng_palette_clear(LodePNGColorMode* info)
 unsigned lodepng_palette_add(LodePNGColorMode* info,
                              unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  data;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data;
   /*the same resize technique as C++ std::vectors is used, and here it's made so that for a palette with
   the max of 256 colors, it'll have the exact alloc size*/
   if(!info->palette) /*allocate palette if empty*/
@@ -2854,8 +2854,8 @@ void lodepng_clear_text(LodePNGInfo* info)
 
 unsigned lodepng_add_text(LodePNGInfo* info, const char* key, const char* str)
 {
-  mse::lh::TIPointerWithBundledVector<char* >  new_keys = MSE_LH_REALLOC(char *, info->text_keys, sizeof(char*) * (info->text_num + 1));
-  mse::lh::TIPointerWithBundledVector<char* >  new_strings = MSE_LH_REALLOC(char *, info->text_strings, sizeof(char*) * (info->text_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_keys = MSE_LH_REALLOC(char *, info->text_keys, sizeof(char*) * (info->text_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_strings = MSE_LH_REALLOC(char *, info->text_strings, sizeof(char*) * (info->text_num + 1));
   if(!new_keys || !new_strings)
   {
     MSE_LH_FREE(new_keys);
@@ -2927,10 +2927,10 @@ void lodepng_clear_itext(LodePNGInfo* info)
 unsigned lodepng_add_itext(LodePNGInfo* info, const char* key, const char* langtag,
                            const char* transkey, const char* str)
 {
-  mse::lh::TIPointerWithBundledVector<char* >  new_keys = MSE_LH_REALLOC(char *, info->itext_keys, sizeof(char*) * (info->itext_num + 1));
-  mse::lh::TIPointerWithBundledVector<char* >  new_langtags = MSE_LH_REALLOC(char *, info->itext_langtags, sizeof(char*) * (info->itext_num + 1));
-  mse::lh::TIPointerWithBundledVector<char* >  new_transkeys = MSE_LH_REALLOC(char *, info->itext_transkeys, sizeof(char*) * (info->itext_num + 1));
-  mse::lh::TIPointerWithBundledVector<char* >  new_strings = MSE_LH_REALLOC(char *, info->itext_strings, sizeof(char*) * (info->itext_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_keys = MSE_LH_REALLOC(char *, info->itext_keys, sizeof(char*) * (info->itext_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_langtags = MSE_LH_REALLOC(char *, info->itext_langtags, sizeof(char*) * (info->itext_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_transkeys = MSE_LH_REALLOC(char *, info->itext_transkeys, sizeof(char*) * (info->itext_num + 1));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(char* )  new_strings = MSE_LH_REALLOC(char *, info->itext_strings, sizeof(char*) * (info->itext_num + 1));
   if(!new_keys || !new_langtags || !new_transkeys || !new_strings)
   {
     MSE_LH_FREE(new_keys);
@@ -3020,7 +3020,7 @@ void lodepng_info_swap(LodePNGInfo* a, LodePNGInfo* b)
 /* ////////////////////////////////////////////////////////////////////////// */
 
 /*index: bitgroup index, bits: bitgroup size(1, 2 or 4), in: bitgroup value, out: octet array to add bits to*/
-static void addColorBits(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, size_t index, unsigned bits, unsigned in)
+static void addColorBits(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, size_t index, unsigned bits, unsigned in)
 {
   unsigned m = bits == 1 ? 7 : bits == 2 ? 3 : 1; /*8 / bits - 1*/
   /*p = the partial index in the byte, e.g. with 4 palettebits it is 0 for first half or 1 for second half*/
@@ -3041,7 +3041,7 @@ node has 16 instead of 8 children.
 */
 struct ColorTree
 {
-  mse::lh::TNativeArrayReplacement<struct ColorTree* , 16>  children; /*up to 16 pointers to ColorTree of next level*/
+  MSE_LH_FIXED_ARRAY_TYPE_PREFIX(16) struct ColorTree* MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(16)  children MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(16); /*up to 16 pointers to ColorTree of next level*/
   int index; /*the payload. Only has a meaningful value if this is in the last level*/
 };
 
@@ -3105,7 +3105,7 @@ static void color_tree_add(ColorTree* tree,
 }
 
 /*put a pixel, given its RGBA color, into image of any color type*/
-static unsigned rgba8ToPixel(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, size_t i,
+static unsigned rgba8ToPixel(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, size_t i,
                              const LodePNGColorMode* mode, ColorTree* tree /*for palette*/,
                              unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -3179,7 +3179,7 @@ static unsigned rgba8ToPixel(mse::TNullableAnyRandomAccessIterator<unsigned char
 }
 
 /*put a pixel, given its RGBA16 color, into image of any color 16-bitdepth type*/
-static void rgba16ToPixel(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, size_t i,
+static void rgba16ToPixel(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, size_t i,
                          const LodePNGColorMode* mode,
                          unsigned short r, unsigned short g, unsigned short b, unsigned short a)
 {
@@ -3222,7 +3222,7 @@ static void rgba16ToPixel(mse::TNullableAnyRandomAccessIterator<unsigned char>  
 /*Get RGBA8 color of pixel with index i (y * width + x) from the raw image with given color type.*/
 static void getPixelColorRGBA8(unsigned char* r, unsigned char* g,
                                unsigned char* b, unsigned char* a,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t i,
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t i,
                                const LodePNGColorMode* mode)
 {
   if(mode->colortype == LCT_GREY)
@@ -3330,8 +3330,8 @@ mode test cases, optimized to convert the colors much faster, when converting
 to RGBA or RGB with 8 bit per cannel. buffer must be RGBA or RGB output with
 enough memory, if has_alpha is true the output is RGBA. mode has the color mode
 of the input buffer.*/
-static void getPixelColorsRGBA8(mse::TNullableAnyRandomAccessIterator<unsigned char>  buffer, size_t numpixels,
-                                unsigned has_alpha, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static void getPixelColorsRGBA8(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  buffer, size_t numpixels,
+                                unsigned has_alpha, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                 const LodePNGColorMode* mode)
 {
   unsigned num_channels = has_alpha ? 4 : 3;
@@ -3465,7 +3465,7 @@ static void getPixelColorsRGBA8(mse::TNullableAnyRandomAccessIterator<unsigned c
 /*Get RGBA16 color of pixel with index i (y * width + x) from the raw image with
 given color type, but the given color type must be 16-bit itself.*/
 static void getPixelColorRGBA16(unsigned short* r, unsigned short* g, unsigned short* b, unsigned short* a,
-                                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t i, const LodePNGColorMode* mode)
+                                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t i, const LodePNGColorMode* mode)
 {
   if(mode->colortype == LCT_GREY)
   {
@@ -3498,7 +3498,7 @@ static void getPixelColorRGBA16(unsigned short* r, unsigned short* g, unsigned s
   }
 }
 
-unsigned lodepng_convert(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned lodepng_convert(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                          const LodePNGColorMode* mode_out, const LodePNGColorMode* mode_in,
                          unsigned w, unsigned h)
 {
@@ -3516,7 +3516,7 @@ unsigned lodepng_convert(mse::TNullableAnyRandomAccessIterator<unsigned char>  o
   if(mode_out->colortype == LCT_PALETTE)
   {
     size_t palettesize = mode_out->palettesize;
-    mse::TNullableAnyRandomAccessIterator<const unsigned char>  palette = mode_out->palette;
+    MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  palette = mode_out->palette;
     size_t palsize = 1u << mode_out->bitdepth;
     /*if the user specified output palette but did not give the values, assume
     they want the values of the input color type (assuming that one is palette).
@@ -3530,7 +3530,7 @@ unsigned lodepng_convert(mse::TNullableAnyRandomAccessIterator<unsigned char>  o
     color_tree_init(&tree);
     for(i = 0; i != palsize; ++i)
     {
-      mse::TNullableAnyRandomAccessIterator<const unsigned char>  p = &palette[i * 4];
+      MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  p = &palette[i * 4];
       color_tree_add(&tree, p[0], p[1], p[2], p[3], i);
     }
   }
@@ -3613,7 +3613,7 @@ static unsigned getValueRequiredBits(unsigned char value)
 /*profile must already have been inited with mode.
 It's ok to set some parameters of profile to done already.*/
 unsigned lodepng_get_color_profile(LodePNGColorProfile* profile,
-                                   mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                                   MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                                    const LodePNGColorMode* mode)
 {
   unsigned error = 0;
@@ -3771,7 +3771,7 @@ unsigned char a = 0;
           color_tree_add(&tree, r, g, b, a, profile->numcolors);
           if(profile->numcolors < 256)
           {
-            mse::TNullableAnyRandomAccessIterator<unsigned char>  p = profile->palette;
+            MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  p = profile->palette;
             unsigned n = profile->numcolors;
             p[n * 4 + 0] = r;
             p[n * 4 + 1] = g;
@@ -3818,7 +3818,7 @@ are less than 256 colors, ...
 Updates values of mode with a potentially smaller color model. mode_out should
 contain the user chosen color model, but will be overwritten with the new chosen one.*/
 unsigned lodepng_auto_choose_color(LodePNGColorMode* mode_out,
-                                   mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+                                   MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                                    const LodePNGColorMode* mode_in)
 {
   LodePNGColorProfile prof;
@@ -3847,7 +3847,7 @@ unsigned int palette_ok;
 
   if(palette_ok)
   {
-    mse::TNullableAnyRandomAccessIterator<unsigned char>  p = prof.palette;
+    MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  p = prof.palette;
     lodepng_palette_clear(mode_out); /*remove potential earlier palette*/
     for(i = 0; i != prof.numcolors; ++i)
     {
@@ -3905,10 +3905,10 @@ static unsigned char paethPredictor(short a, short b, short c)
 
 /*shared values used by multiple Adam7 related functions*/
 
-static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_IX = { 0, 4, 0, 2, 0, 1, 0 }; /*x start values*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_IY = { 0, 0, 4, 0, 2, 0, 1 }; /*y start values*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_DX = { 8, 8, 4, 4, 2, 2, 1 }; /*x delta values*/
-static mse::lh::TNativeArrayReplacement<unsigned int, 7>  ADAM7_DY = { 8, 8, 8, 4, 4, 2, 2 }; /*y delta values*/
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_IX) = { 0, 4, 0, 2, 0, 1, 0 }; /*x start values*/
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_IY) = { 0, 0, 4, 0, 2, 0, 1 }; /*y start values*/
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_DX) = { 8, 8, 4, 4, 2, 2, 1 }; /*x delta values*/
+static MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, ADAM7_DY) = { 8, 8, 8, 4, 4, 2, 2 }; /*y delta values*/
 
 /*
 Outputs various dimensions and positions in the image related to the Adam7 reduced images.
@@ -3925,8 +3925,8 @@ bpp: bits per pixel
 "padded" is only relevant if bpp is less than 8 and a scanline or image does not
  end at a full byte
 */
-static void Adam7_getpassvalues(mse::TNullableAnyRandomAccessIterator<unsigned int>  passw, mse::TNullableAnyRandomAccessIterator<unsigned int>  passh, mse::TNullableAnyRandomAccessIterator<size_t>  filter_passstart,
-                                mse::TNullableAnyRandomAccessIterator<size_t>  padded_passstart, mse::TNullableAnyRandomAccessIterator<size_t>  passstart, unsigned w, unsigned h, unsigned bpp)
+static void Adam7_getpassvalues(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned int)  passw, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned int)  passh, MSE_LH_ARRAY_ITERATOR_TYPE(size_t)  filter_passstart,
+                                MSE_LH_ARRAY_ITERATOR_TYPE(size_t)  padded_passstart, MSE_LH_ARRAY_ITERATOR_TYPE(size_t)  passstart, unsigned w, unsigned h, unsigned bpp)
 {
   /*the passstart values have 8 values: the 8th one indicates the byte after the end of the 7th (= last) pass*/
   unsigned i;
@@ -3961,7 +3961,7 @@ static void Adam7_getpassvalues(mse::TNullableAnyRandomAccessIterator<unsigned i
 
 /*read the information from the header and store it in the LodePNGInfo. return value is error*/
 unsigned lodepng_inspect(unsigned* w, unsigned* h, LodePNGState* state,
-                         mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+                         MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
   LodePNGInfo* info = &state->info_png;
   if(insize == 0 || !bool(in))
@@ -4026,7 +4026,7 @@ unsigned lodepng_inspect(unsigned* w, unsigned* h, LodePNGState* state,
   return state->error;
 }
 
-static unsigned unfilterScanline(mse::TNullableAnyRandomAccessIterator<unsigned char>  recon, mse::TNullableAnyRandomAccessIterator<const unsigned char>  scanline, mse::TNullableAnyRandomAccessIterator<const unsigned char>  precon,
+static unsigned unfilterScanline(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  recon, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  scanline, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  precon,
                                  size_t bytewidth, unsigned char filterType, size_t length)
 {
   /*
@@ -4100,7 +4100,7 @@ static unsigned unfilterScanline(mse::TNullableAnyRandomAccessIterator<unsigned 
   return 0;
 }
 
-static unsigned unfilter(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h, unsigned bpp)
+static unsigned unfilter(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h, unsigned bpp)
 {
   /*
   For PNG filter method 0
@@ -4111,7 +4111,7 @@ static unsigned unfilter(mse::TNullableAnyRandomAccessIterator<unsigned char>  o
   */
 
   unsigned y;
-  mse::TNullableAnyRandomAccessIterator<unsigned char>  prevline = 0;
+  MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  prevline = 0;
 
   /*bytewidth is used for filtering, is 1 when bpp < 8, number of bytes per pixel otherwise*/
   size_t bytewidth = (bpp + 7) / 8;
@@ -4142,13 +4142,13 @@ out must be big enough AND must be 0 everywhere if bpp < 8 in the current implem
 (because that's likely a little bit faster)
 NOTE: comments about padding bits are only relevant if bpp < 8
 */
-static void Adam7_deinterlace(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h, unsigned bpp)
+static void Adam7_deinterlace(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h, unsigned bpp)
 {
-  mse::lh::TNativeArrayReplacement<unsigned int, 7>  passw; 
-mse::lh::TNativeArrayReplacement<unsigned int, 7>  passh;
-  mse::lh::TNativeArrayReplacement<size_t, 8>  filter_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  padded_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
+  MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passw); 
+MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passh);
+  MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, filter_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, padded_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, passstart);
   unsigned i;
 
   Adam7_getpassvalues(passw, passh, filter_passstart, padded_passstart, passstart, w, h, bpp);
@@ -4200,7 +4200,7 @@ size_t ibp; /*bit pointers (for out and in buffer)*/
   }
 }
 
-static void removePaddingBits(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static void removePaddingBits(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                               size_t olinebits, size_t ilinebits, unsigned h)
 {
   /*
@@ -4231,7 +4231,7 @@ size_t obp = 0; /*input and output bit pointers*/
 /*out must be buffer big enough to contain full image, and in must contain the full decompressed data from
 the IDAT chunks (with filter index bytes and possible padding bits)
 return value is error*/
-static unsigned postProcessScanlines(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<unsigned char>  in,
+static unsigned postProcessScanlines(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  in,
                                      unsigned w, unsigned h, const LodePNGInfo* info_png)
 {
   /*
@@ -4256,10 +4256,10 @@ static unsigned postProcessScanlines(mse::TNullableAnyRandomAccessIterator<unsig
   }
   else /*interlace_method is 1 (Adam7)*/
   {
-    mse::lh::TNativeArrayReplacement<unsigned int, 7>  passw; 
-mse::lh::TNativeArrayReplacement<unsigned int, 7>  passh; mse::lh::TNativeArrayReplacement<size_t, 8>  filter_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  padded_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
+    MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passw); 
+MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passh); MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, filter_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, padded_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, passstart);
     unsigned i;
 
     Adam7_getpassvalues(passw, passh, filter_passstart, padded_passstart, passstart, w, h, bpp);
@@ -4284,7 +4284,7 @@ mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
   return 0;
 }
 
-static unsigned readChunk_PLTE(LodePNGColorMode* color, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_PLTE(LodePNGColorMode* color, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   unsigned int pos = 0; 
 unsigned int i;
@@ -4309,7 +4309,7 @@ unsigned int i;
   return 0; /* OK */
 }
 
-static unsigned readChunk_tRNS(LodePNGColorMode* color, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_tRNS(LodePNGColorMode* color, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   unsigned i;
   if(color->colortype == LCT_PALETTE)
@@ -4345,7 +4345,7 @@ static unsigned readChunk_tRNS(LodePNGColorMode* color, mse::TNullableAnyRandomA
 
 #ifdef LODEPNG_COMPILE_ANCILLARY_CHUNKS
 /*background color chunk (bKGD)*/
-static unsigned readChunk_bKGD(LodePNGInfo* info, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_bKGD(LodePNGInfo* info, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   if(info->color.colortype == LCT_PALETTE)
   {
@@ -4378,7 +4378,7 @@ static unsigned readChunk_bKGD(LodePNGInfo* info, mse::TNullableAnyRandomAccessI
 }
 
 /*text chunk (tEXt)*/
-static unsigned readChunk_tEXt(LodePNGInfo* info, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_tEXt(LodePNGInfo* info, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   unsigned error = 0;
   char*  key = 0; 
@@ -4424,7 +4424,7 @@ unsigned int string2_begin;
 
 /*compressed text chunk (zTXt)*/
 static unsigned readChunk_zTXt(LodePNGInfo* info, const LodePNGDecompressSettings* zlibsettings,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   unsigned error = 0;
   unsigned i;
@@ -4474,7 +4474,7 @@ unsigned int string2_begin;
 
 /*international text chunk (iTXt)*/
 static unsigned readChunk_iTXt(LodePNGInfo* info, const LodePNGDecompressSettings* zlibsettings,
-                               mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+                               MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   unsigned error = 0;
   unsigned i;
@@ -4570,7 +4570,7 @@ char*  transkey = 0;
   return error;
 }
 
-static unsigned readChunk_tIME(LodePNGInfo* info, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_tIME(LodePNGInfo* info, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   if(chunkLength != 7) return 73; /*invalid tIME chunk size*/
 
@@ -4585,7 +4585,7 @@ static unsigned readChunk_tIME(LodePNGInfo* info, mse::TNullableAnyRandomAccessI
   return 0; /* OK */
 }
 
-static unsigned readChunk_pHYs(LodePNGInfo* info, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t chunkLength)
+static unsigned readChunk_pHYs(LodePNGInfo* info, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t chunkLength)
 {
   if(chunkLength != 9) return 74; /*invalid pHYs chunk size*/
 
@@ -4599,12 +4599,12 @@ static unsigned readChunk_pHYs(LodePNGInfo* info, mse::TNullableAnyRandomAccessI
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
 
 /*read a PNG, the result will be in the same color type as the PNG (hence "generic")*/
-static void decodeGeneric(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h,
+static void decodeGeneric(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h,
                           LodePNGState* state,
-                          mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+                          MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
   unsigned char IEND = 0;
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  chunk;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk;
   size_t i;
   ucvector idat; /*the data from idat chunks*/
   ucvector scanlines;
@@ -4640,7 +4640,7 @@ static void decodeGeneric(mse::lh::TIPointerWithBundledVector<unsigned char> *  
   while(!IEND && !state->error)
   {
     unsigned chunkLength;
-    mse::TNullableAnyRandomAccessIterator<const unsigned char>  data; /*the data in the chunk*/
+    MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data; /*the data in the chunk*/
 
     /*error: size of the in buffer too small to contain next chunk*/
     if((size_t)((chunk - in) + 12) > insize || chunk < in) CERROR_BREAK(state->error, 30);
@@ -4800,9 +4800,9 @@ static void decodeGeneric(mse::lh::TIPointerWithBundledVector<unsigned char> *  
   ucvector_cleanup(&scanlines);
 }
 
-unsigned lodepng_decode(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h,
+unsigned lodepng_decode(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h,
                         LodePNGState* state,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
   *out = 0;
   decodeGeneric(out, w, h, state, in, insize);
@@ -4821,7 +4821,7 @@ unsigned lodepng_decode(mse::lh::TIPointerWithBundledVector<unsigned char> *  ou
   else
   {
     /*color conversion needed; sort of copy of the data*/
-    mse::lh::TIPointerWithBundledVector<unsigned char>  data = *out;
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data = *out;
     size_t outsize;
 
     /*TODO: check if this works according to the statement in the documentation: "The converter can convert
@@ -4845,7 +4845,7 @@ unsigned lodepng_decode(mse::lh::TIPointerWithBundledVector<unsigned char> *  ou
   return state->error;
 }
 
-unsigned lodepng_decode_memory(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned lodepng_decode_memory(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                size_t insize, LodePNGColorType colortype, unsigned bitdepth)
 {
   unsigned error;
@@ -4858,21 +4858,21 @@ unsigned lodepng_decode_memory(mse::lh::TIPointerWithBundledVector<unsigned char
   return error;
 }
 
-unsigned lodepng_decode32(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+unsigned lodepng_decode32(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
   return lodepng_decode_memory(out, w, h, in, insize, LCT_RGBA, 8);
 }
 
-unsigned lodepng_decode24(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+unsigned lodepng_decode24(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
   return lodepng_decode_memory(out, w, h, in, insize, LCT_RGB, 8);
 }
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned lodepng_decode_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, const char* filename,
+unsigned lodepng_decode_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, const char* filename,
                              LodePNGColorType colortype, unsigned bitdepth)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer = 0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer = 0;
   size_t buffersize;
   unsigned error;
   error = lodepng_load_file(&buffer, &buffersize, filename);
@@ -4881,12 +4881,12 @@ unsigned lodepng_decode_file(mse::lh::TIPointerWithBundledVector<unsigned char> 
   return error;
 }
 
-unsigned lodepng_decode32_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, const char* filename)
+unsigned lodepng_decode32_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, const char* filename)
 {
   return lodepng_decode_file(out, w, h, filename, LCT_RGBA, 8);
 }
 
-unsigned lodepng_decode24_file(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, unsigned* w, unsigned* h, const char* filename)
+unsigned lodepng_decode24_file(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, unsigned* w, unsigned* h, const char* filename)
 {
   return lodepng_decode_file(out, w, h, filename, LCT_RGB, 8);
 }
@@ -4945,7 +4945,7 @@ void lodepng_state_copy(LodePNGState* dest, const LodePNGState* source)
 /* ////////////////////////////////////////////////////////////////////////// */
 
 /*chunkName must be string of 4 characters*/
-static unsigned addChunk(ucvector* out, const char* chunkName, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t length)
+static unsigned addChunk(ucvector* out, const char* chunkName, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t length)
 {
   CERROR_TRY_RETURN(lodepng_chunk_create(&out->data, &out->size, (unsigned)length, chunkName, data));
   out->allocsize = out->size; /*fix the allocsize again*/
@@ -5048,7 +5048,7 @@ static unsigned addChunk_tRNS(ucvector* out, const LodePNGColorMode* info)
   return error;
 }
 
-static unsigned addChunk_IDAT(ucvector* out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  data, size_t datasize,
+static unsigned addChunk_IDAT(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  data, size_t datasize,
                               LodePNGCompressSettings* zlibsettings)
 {
   ucvector zlibdata;
@@ -5192,7 +5192,7 @@ static unsigned addChunk_bKGD(ucvector* out, const LodePNGInfo* info)
 static unsigned addChunk_tIME(ucvector* out, const LodePNGTime* time)
 {
   unsigned error = 0;
-  mse::lh::TIPointerWithBundledVector<unsigned char>  data((7) / sizeof(unsigned char));
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char), 7);
   if(!data) return 83; /*alloc fail*/
   data[0] = (unsigned char)(time->year >> 8);
   data[1] = (unsigned char)(time->year & 255);
@@ -5224,7 +5224,7 @@ static unsigned addChunk_pHYs(ucvector* out, const LodePNGInfo* info)
 
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
 
-static void filterScanline(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  scanline, mse::TNullableAnyRandomAccessIterator<const unsigned char>  prevline,
+static void filterScanline(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  scanline, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  prevline,
                            size_t length, size_t bytewidth, unsigned char filterType)
 {
   size_t i;
@@ -5289,7 +5289,7 @@ static float flog2(float f)
   return result + 1.442695f * (f * f * f / 3 - 3 * f * f / 2 + 3 * f - 1.83333f);
 }
 
-static unsigned filter(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+static unsigned filter(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                        const LodePNGColorMode* info, const LodePNGEncoderSettings* settings)
 {
   /*
@@ -5303,7 +5303,7 @@ static unsigned filter(mse::TNullableAnyRandomAccessIterator<unsigned char>  out
   size_t linebytes = (w * bpp + 7) / 8;
   /*bytewidth is used for filtering, is 1 when bpp < 8, number of bytes per pixel otherwise*/
   size_t bytewidth = (bpp + 7) / 8;
-  mse::TNullableAnyRandomAccessIterator<const unsigned char>  prevline = 0;
+  MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  prevline = 0;
   unsigned int x; 
 unsigned int y;
   unsigned error = 0;
@@ -5341,8 +5341,8 @@ unsigned int y;
   else if(strategy == LFS_MINSUM)
   {
     /*adaptive filtering*/
-    mse::lh::TNativeArrayReplacement<size_t, 5>  sum;
-    mse::lh::TNativeArrayReplacement<mse::lh::TIPointerWithBundledVector<unsigned char> , 5>  attempt; /*five filtering attempts, one for each filter type*/
+    MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 5, sum);
+    MSE_LH_FIXED_ARRAY_TYPE_PREFIX(5) MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(5)  attempt MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(5); /*five filtering attempts, one for each filter type*/
     size_t smallest = 0;
     unsigned char type; 
 unsigned char bestType = 0;
@@ -5400,12 +5400,12 @@ unsigned char bestType = 0;
   }
   else if(strategy == LFS_ENTROPY)
   {
-    mse::lh::TNativeArrayReplacement<float, 5>  sum;
-    mse::lh::TNativeArrayReplacement<mse::lh::TIPointerWithBundledVector<unsigned char> , 5>  attempt; /*five filtering attempts, one for each filter type*/
+    MSE_LH_FIXED_ARRAY_DECLARATION(float, 5, sum);
+    MSE_LH_FIXED_ARRAY_TYPE_PREFIX(5) MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(5)  attempt MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(5); /*five filtering attempts, one for each filter type*/
     float smallest = 0;
     unsigned int type; 
 unsigned int bestType = 0;
-    mse::lh::TNativeArrayReplacement<unsigned int, 256>  count;
+    MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 256, count);
 
     for(type = 0; type != 5; ++type)
     {
@@ -5462,12 +5462,12 @@ unsigned int bestType = 0;
     /*brute force filter chooser.
     deflate the scanline after every filter attempt to see which one deflates best.
     This is very slow and gives only slightly smaller, sometimes even larger, result*/
-    mse::lh::TNativeArrayReplacement<size_t, 5>  size;
-    mse::lh::TNativeArrayReplacement<mse::lh::TIPointerWithBundledVector<unsigned char> , 5>  attempt; /*five filtering attempts, one for each filter type*/
+    MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 5, size);
+    MSE_LH_FIXED_ARRAY_TYPE_PREFIX(5) MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) MSE_LH_FIXED_ARRAY_TYPE_SUFFIX(5)  attempt MSE_LH_FIXED_ARRAY_TYPE_POST_NAME_SUFFIX(5); /*five filtering attempts, one for each filter type*/
     size_t smallest = 0;
     unsigned int type = 0; 
 unsigned int bestType = 0;
-    mse::lh::TIPointerWithBundledVector<unsigned char>  dummy;
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  dummy;
     LodePNGCompressSettings zlibsettings = settings->zlibsettings;
     /*use fixed tree on the attempts so that the tree is not adapted to the filtertype on purpose,
     to simulate the true case where the tree is the same for the whole image. Sometimes it gives
@@ -5513,7 +5513,7 @@ unsigned int bestType = 0;
   return error;
 }
 
-static void addPaddingBits(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static void addPaddingBits(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                            size_t olinebits, size_t ilinebits, unsigned h)
 {
   /*The opposite of the removePaddingBits function
@@ -5547,13 +5547,13 @@ in has the following size in bits: w * h * bpp.
 out is possibly bigger due to padding bits between reduced images
 NOTE: comments about padding bits are only relevant if bpp < 8
 */
-static void Adam7_interlace(mse::TNullableAnyRandomAccessIterator<unsigned char>  out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h, unsigned bpp)
+static void Adam7_interlace(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h, unsigned bpp)
 {
-  mse::lh::TNativeArrayReplacement<unsigned int, 7>  passw; 
-mse::lh::TNativeArrayReplacement<unsigned int, 7>  passh;
-  mse::lh::TNativeArrayReplacement<size_t, 8>  filter_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  padded_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
+  MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passw); 
+MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passh);
+  MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, filter_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, padded_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, passstart);
   unsigned i;
 
   Adam7_getpassvalues(passw, passh, filter_passstart, padded_passstart, passstart, w, h, bpp);
@@ -5606,7 +5606,7 @@ size_t ibp; /*bit pointers (for out and in buffer)*/
 
 /*out must be buffer big enough to contain uncompressed IDAT chunk data, and in must contain the full image.
 return value is error**/
-static unsigned preProcessScanlines(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+static unsigned preProcessScanlines(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                                     unsigned w, unsigned h,
                                     const LodePNGInfo* info_png, const LodePNGEncoderSettings* settings)
 {
@@ -5629,7 +5629,7 @@ static unsigned preProcessScanlines(mse::lh::TIPointerWithBundledVector<unsigned
       /*non multiple of 8 bits per scanline, padding bits needed per scanline*/
       if(bpp < 8 && w * bpp != ((w * bpp + 7) / 8) * 8)
       {
-        mse::lh::TIPointerWithBundledVector<unsigned char>  padded((h * ((w * bpp + 7) / 8)) / sizeof(unsigned char));
+        MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  padded = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char), h * ((w * bpp + 7) / 8));
         if(!padded) error = 83; /*alloc fail*/
         if(!error)
         {
@@ -5647,12 +5647,12 @@ static unsigned preProcessScanlines(mse::lh::TIPointerWithBundledVector<unsigned
   }
   else /*interlace_method is 1 (Adam7)*/
   {
-    mse::lh::TNativeArrayReplacement<unsigned int, 7>  passw; 
-mse::lh::TNativeArrayReplacement<unsigned int, 7>  passh;
-    mse::lh::TNativeArrayReplacement<size_t, 8>  filter_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  padded_passstart; 
-mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
-    mse::lh::TIPointerWithBundledVector<unsigned char>  adam7;
+    MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passw); 
+MSE_LH_FIXED_ARRAY_DECLARATION(unsigned int, 7, passh);
+    MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, filter_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, padded_passstart); 
+MSE_LH_FIXED_ARRAY_DECLARATION(size_t, 8, passstart);
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  adam7;
 
     Adam7_getpassvalues(passw, passh, filter_passstart, padded_passstart, passstart, w, h, bpp);
 
@@ -5672,7 +5672,7 @@ mse::lh::TNativeArrayReplacement<size_t, 8>  passstart;
       {
         if(bpp < 8)
         {
-          mse::lh::TIPointerWithBundledVector<unsigned char>  padded((padded_passstart[i + 1] - padded_passstart[i]) / sizeof(unsigned char));
+          MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  padded = MSE_LH_ALLOC_DYN_ARRAY1(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char), padded_passstart[i + 1] - padded_passstart[i]);
           if(!padded) ERROR_BREAK(83); /*alloc fail*/
           addPaddingBits(padded, ((adam7) + (passstart[i])),
                          ((passw[i] * bpp + 7) / 8) * 8, passw[i] * bpp, passh[i]);
@@ -5702,7 +5702,7 @@ returns 0 if the palette is opaque,
 returns 1 if the palette has a single color with alpha 0 ==> color key
 returns 2 if the palette is semi-translucent.
 */
-static unsigned getPaletteTranslucency(mse::TNullableAnyRandomAccessIterator<const unsigned char>  palette, size_t palettesize)
+static unsigned getPaletteTranslucency(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  palette, size_t palettesize)
 {
   size_t i;
   unsigned key = 0;
@@ -5725,9 +5725,9 @@ unsigned int b = 0; /*the value of the color with alpha 0, so long as color keyi
 }
 
 #ifdef LODEPNG_COMPILE_ANCILLARY_CHUNKS
-static unsigned addUnknownChunks(ucvector* out, mse::TNullableAnyRandomAccessIterator<unsigned char>  data, size_t datasize)
+static unsigned addUnknownChunks(ucvector* out, MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  data, size_t datasize)
 {
-  mse::TNullableAnyRandomAccessIterator<unsigned char>  inchunk = data;
+  MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  inchunk = data;
   while((size_t)(inchunk - data) < datasize)
   {
     CERROR_TRY_RETURN(lodepng_chunk_append(&out->data, &out->size, inchunk));
@@ -5738,13 +5738,13 @@ static unsigned addUnknownChunks(ucvector* out, mse::TNullableAnyRandomAccessIte
 }
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
 
-unsigned lodepng_encode(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize,
-                        mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+unsigned lodepng_encode(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize,
+                        MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                         LodePNGState* state)
 {
   LodePNGInfo info;
   ucvector outv;
-  mse::lh::TIPointerWithBundledVector<unsigned char>  data = 0; /*uncompressed version of the IDAT chunk data*/
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  data = 0; /*uncompressed version of the IDAT chunk data*/
   size_t datasize = 0;
 
   /*provide some proper output values if error will happen*/
@@ -5784,7 +5784,7 @@ unsigned lodepng_encode(mse::lh::TIPointerWithBundledVector<unsigned char> *  ou
 
   if(!lodepng_color_mode_equal(&state->info_raw, &info.color))
   {
-    mse::lh::TIPointerWithBundledVector<unsigned char>  converted;
+    MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  converted;
     size_t size = (w * h * (size_t)lodepng_get_bpp(&info.color) + 7) / 8;
 
     MSE_LH_ALLOC(unsigned char, converted, size);
@@ -5931,7 +5931,7 @@ unsigned lodepng_encode(mse::lh::TIPointerWithBundledVector<unsigned char> *  ou
   return state->error;
 }
 
-unsigned lodepng_encode_memory(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image,
+unsigned lodepng_encode_memory(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image,
                                unsigned w, unsigned h, LodePNGColorType colortype, unsigned bitdepth)
 {
   unsigned error;
@@ -5947,21 +5947,21 @@ unsigned lodepng_encode_memory(mse::lh::TIPointerWithBundledVector<unsigned char
   return error;
 }
 
-unsigned lodepng_encode32(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h)
+unsigned lodepng_encode32(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h)
 {
   return lodepng_encode_memory(out, outsize, image, w, h, LCT_RGBA, 8);
 }
 
-unsigned lodepng_encode24(mse::lh::TIPointerWithBundledVector<unsigned char> *  out, size_t* outsize, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h)
+unsigned lodepng_encode24(MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char) *  out, size_t* outsize, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h)
 {
   return lodepng_encode_memory(out, outsize, image, w, h, LCT_RGB, 8);
 }
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned lodepng_encode_file(const char* filename, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h,
+unsigned lodepng_encode_file(const char* filename, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h,
                              LodePNGColorType colortype, unsigned bitdepth)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer;
   size_t buffersize;
   unsigned error = lodepng_encode_memory(&buffer, &buffersize, image, w, h, colortype, bitdepth);
   if(!error) error = lodepng_save_file(buffer, buffersize, filename);
@@ -5969,12 +5969,12 @@ unsigned lodepng_encode_file(const char* filename, mse::TNullableAnyRandomAccess
   return error;
 }
 
-unsigned lodepng_encode32_file(const char* filename, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h)
+unsigned lodepng_encode32_file(const char* filename, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h)
 {
   return lodepng_encode_file(filename, image, w, h, LCT_RGBA, 8);
 }
 
-unsigned lodepng_encode24_file(const char* filename, mse::TNullableAnyRandomAccessIterator<const unsigned char>  image, unsigned w, unsigned h)
+unsigned lodepng_encode24_file(const char* filename, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  image, unsigned w, unsigned h)
 {
   return lodepng_encode_file(filename, image, w, h, LCT_RGB, 8);
 }
@@ -6132,10 +6132,10 @@ unsigned save_file(const std::vector<unsigned char>& buffer, const std::string& 
 
 #ifdef LODEPNG_COMPILE_ZLIB
 #ifdef LODEPNG_COMPILE_DECODER
-unsigned decompress(std::vector<unsigned char>& out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned decompress(std::vector<unsigned char>& out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                     const LodePNGDecompressSettings& settings)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer = 0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer = 0;
   size_t buffersize = 0;
   unsigned error = zlib_decompress(&buffer, &buffersize, in, insize, &settings);
   if(buffer)
@@ -6154,10 +6154,10 @@ unsigned decompress(std::vector<unsigned char>& out, const std::vector<unsigned 
 #endif /* LODEPNG_COMPILE_DECODER */
 
 #ifdef LODEPNG_COMPILE_ENCODER
-unsigned compress(std::vector<unsigned char>& out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize,
+unsigned compress(std::vector<unsigned char>& out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize,
                   const LodePNGCompressSettings& settings)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer = 0;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer = 0;
   size_t buffersize = 0;
   unsigned error = zlib_compress(&buffer, &buffersize, in, insize, &settings);
   if(buffer)
@@ -6203,10 +6203,10 @@ State& State::operator=(const State& other)
 
 #ifdef LODEPNG_COMPILE_DECODER
 
-unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in,
+unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in,
                 size_t insize, LodePNGColorType colortype, unsigned bitdepth)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer;
   unsigned error = lodepng_decode_memory(&buffer, &w, &h, in, insize, colortype, bitdepth);
   if(buffer && !error)
   {
@@ -6228,9 +6228,9 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
 
 unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h,
                 State& state,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, size_t insize)
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, size_t insize)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer = NULL;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer = NULL;
   unsigned error = lodepng_decode(&buffer, &w, &h, &state, in, insize);
   if(buffer && !error)
   {
@@ -6261,10 +6261,10 @@ unsigned decode(std::vector<unsigned char>& out, unsigned& w, unsigned& h, const
 #endif /* LODEPNG_COMPILE_DISK */
 
 #ifdef LODEPNG_COMPILE_ENCODER
-unsigned encode(std::vector<unsigned char>& out, mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+unsigned encode(std::vector<unsigned char>& out, MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 LodePNGColorType colortype, unsigned bitdepth)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer;
   size_t buffersize;
   unsigned error = lodepng_encode_memory(&buffer, &buffersize, in, w, h, colortype, bitdepth);
   if(buffer)
@@ -6284,10 +6284,10 @@ unsigned encode(std::vector<unsigned char>& out,
 }
 
 unsigned encode(std::vector<unsigned char>& out,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 State& state)
 {
-  mse::lh::TIPointerWithBundledVector<unsigned char>  buffer;
+  MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE(unsigned char)  buffer;
   size_t buffersize;
   unsigned error = lodepng_encode(&buffer, &buffersize, in, w, h, &state);
   if(buffer)
@@ -6308,7 +6308,7 @@ unsigned encode(std::vector<unsigned char>& out,
 
 #ifdef LODEPNG_COMPILE_DISK
 unsigned encode(const std::string& filename,
-                mse::TNullableAnyRandomAccessIterator<const unsigned char>  in, unsigned w, unsigned h,
+                MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  in, unsigned w, unsigned h,
                 LodePNGColorType colortype, unsigned bitdepth)
 {
   std::vector<unsigned char> buffer;
