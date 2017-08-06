@@ -22,10 +22,10 @@ After running the conversion tool, some hand-processing may still need to be don
 
     <<<<<<< /home/user1/dev/clang_tooling/mutator/targets_for_mutation/lodepng/lodepng-master/src/lodepng.h.converted
     MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  lodepng_chunk_next(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk);
-    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned     char)  chunk);
+    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
     =======
     unsigned char* lodepng_chunk_next(unsigned char* chunk);
-    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned     char)  chunk);
+    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  chunk);
     >>>>>>> /home/user1/dev/clang_tooling/mutator/targets_for_mutation/lodepng/lodepng-master/src/lodepng.h.converted_2
 
 You may recognize the format of this code snippet as the result of a [conflict encountered during a merge](https://linux.die.net/man/1/merge). Indeed that is this case here. So here we're going to need to resolve the conflict as we would with any other merge conflict. In this case, just keep the code from the first part and delete the second part. 
