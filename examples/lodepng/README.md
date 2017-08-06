@@ -16,15 +16,19 @@ So, from the source directory of the new copy of the project, we instigate the c
 
     {mutator_executable_directory}/safercpp-arr lodepng.cpp lodepng_util.cpp -- -I'/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include' -I'/usr/lib/gcc/x86_64-linux-gnu/5.4.0/include-fixed'
 
-This command should result in five new files being written into the project (copy) directory, namely, lodepng.cpp.converted_1, lodepng.h.converted_1, lodepng.h.converted_2, lodepng_util.cpp.converted_2 and lodepng_util.h.converted_2.
+After some processing, the program will prompt for confirmation before replacing the source files with their converted versions. (The prompt can be suppressed with the "-SuppressPrompts" option.)
 
-Notice that there are two converted versions of lodepng.h. The reason for this is that, due to a limitation of the "clang libTooling" library we use, the tool can only analyze one "translation unit" (i.e source file) at a time. And since lodepng.h is included by both lodepng.cpp and lodepng_util.cpp, the conversion tool produces one converted version of lodepng.h from analyzing lodepng.cpp, and another version from analyzing lodepng_util.cpp. So lodepng.h.converted_1 comes from analysis of the first source file (lodepng.cpp), and lodepng.h.converted_2 comes from analysis of the second source file (lodepng_util.cpp). A lot of the changes will be common to both converted versions, but some won't be. So at this point, you're going to want to merge the changes from both versions. For example, you can use a merge tool like meld:
+After running the conversion tool, some hand-processing may still need to be done. For example, if we try to compile the converted project we may get a compile error at line 711 of the lodepng.h file where we may find the following code snippet:
 
-    meld lodepng.h.converted_1 lodepng.h lodepng.h.converted_2
+    <<<<<<< /home/user1/dev/clang_tooling/mutator/targets_for_mutation/lodepng/lodepng-master/src/lodepng.h.converted
+    MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  lodepng_chunk_next(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk);
+    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned     char)  chunk);
+    =======
+    unsigned char* lodepng_chunk_next(unsigned char* chunk);
+    const MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned char)  lodepng_chunk_next_const(MSE_LH_ARRAY_ITERATOR_TYPE(const unsigned     char)  chunk);
+    >>>>>>> /home/user1/dev/clang_tooling/mutator/targets_for_mutation/lodepng/lodepng-master/src/lodepng.h.converted_2
 
-When, during the merge, you encounter a conflict between a change to MSE_LH_DYNAMIC_ARRAY_ITERATOR_TYPE() and a change to MSE_LH_ARRAY_ITERATOR_TYPE(), choose the former. 
+You may recognize the format of this code snippet as the result of a [conflict encountered during a merge](https://linux.die.net/man/1/merge). Indeed that is this case here. So here we're going to need to resolve the conflict as we would with any other merge conflict. In this case, just keep the code from the first part and delete the second part. 
 
-After executing the merge, replace the rest of the source files with their converted versions, and we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This copy of the project should compile and run. And, in theory, be safer as all the arrays have been replaced with memory-safe substitutes.
+After fixing the merge conflict, we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This copy of the project should compile and run. And, in theory, be safer as all the arrays and array pointers have been replaced with memory-safe substitutes.
 
-
-Note that, aside from the merge, no hand editing of the code was required here. While that was the case for this project, that will not necessarily be the case for other projects. The tool is not yet complete, and may not be able to catch every place where the code needs to be modified.
