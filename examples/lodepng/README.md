@@ -18,7 +18,7 @@ So, from the source directory of the new copy of the project, we instigate the c
 
 After some processing, the program will prompt for confirmation before replacing the source files with their converted versions. (The prompt can be suppressed with the "-SuppressPrompts" option.)
 
-After running the conversion tool, some hand-processing may still need to be done. For example, if we try to compile the converted project we may get a compile error at line 711 of the lodepng.h file where we may find the following code snippet:
+After running the conversion tool, some hand-processing may still need to be done. For example, if we try to compile the converted project we may get a compile error at line 711 of the lodepng.h file where we may find the following code:
 
     <<<<<<< /home/user1/dev/clang_tooling/mutator/targets_for_mutation/lodepng/lodepng-master/src/lodepng.h.converted
     MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  lodepng_chunk_next(MSE_LH_ARRAY_ITERATOR_TYPE(unsigned char)  chunk);
