@@ -30,5 +30,5 @@ After running the conversion tool, some hand-processing may still need to be don
 
 You may recognize the format of this code snippet as the result of a [conflict encountered during a merge](https://linux.die.net/man/1/merge). Indeed that is this case here. So here we're going to need to resolve the conflict as we would with any other merge conflict. In this case, just keep the code from the first part and delete the second part. 
 
-After fixing the merge conflict, we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This copy of the project should compile and run. And, in theory, be safer as all the arrays and array pointers have been replaced with memory-safe substitutes.
+After fixing the merge conflict, we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This converted version of the project should compile and run. And, in theory, be safer as all the arrays and array pointers have been replaced with memory-safe substitutes.
 
