@@ -1,4 +1,4 @@
-Jul 2017
+Aug 2017
 
 This subdirectory contains versions of [LodePNG](https://github.com/lvandeve/lodepng), an open source png encoder/decoder, before and after (partial) conversion from C to [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus). The conversion was done using the "safercpp-arr" tool that's part of the [mutator](https://github.com/bloodstalker/mutator) code analysis project. This conversion assistance tool is still in early development, and at the moment only converts native arrays and pointers used as array iterators to their SaferCPlusPlus counterparts.
 
@@ -31,4 +31,11 @@ After running the conversion tool, some hand-processing may still need to be don
 You may recognize the format of this code snippet as the result of a [conflict encountered during a merge](https://linux.die.net/man/1/merge). Indeed that is this case here. So here we're going to need to resolve the conflict as we would with any other merge conflict. In this case, just keep the code from the first part and delete the second part. 
 
 After fixing the merge conflict, we're done. Almost. We just need to download the [SaferCPlusPlus](https://github.com/duneroadrunner/SaferCPlusPlus) library and make sure it's in the include path. That should be it. This converted version of the project should compile and run. And, in theory, be safer as all the arrays and array pointers have been replaced with memory-safe substitutes.
+
+¶
+
+
+If you are wondering why there would be merge conflicts in the converted code, it's because the "clang libTooling" C/C++ code processing library we use only supports processing one source file and its dependent includes (aka "translation unit") at a time. But some (header) files are included by multiple source files, and so get converted multiple times. Since each conversion is done based only on the information available in the associated translation unit, conversions from different translation units may differ. So the conversion tool takes the changes from each conversion and merges them. By default, it uses the system's default "merge" command. But some merge tools may be better than others, and you can specify which merge command to use with the "-MergeCommand" option. For example, upon closer inspection, the merge conflict in our LodePNG example doesn't seem to be a real conflict at all, but simply an artifact of the default merge tool.
+
+Ideally, rather than be restricted to the current translation unit, conversions would be based on information from all the specified translation units. To that end, there is an option, "-CTUAnalysis", that will, for each translation unit, cause the conversion tool to attempt to "import" program information from all the other translation units. In theory, this can reduce or eliminate discrepancies (and therefore merge conflicts) between conversions from different translation units. In practice, the libTooling library's support for this feature seems to be still immature and kind of buggy, sometimes leading to some unexpected results. But it may work well in your case, and it should get better as the libTooling library improves, so feel free to try it out. Also, at the time of writing (Aug 2017), attempting to import namespaces, or elements declared in a namespace, will cause the libTooling library to crash. So by default, the conversion tool avoids that. But this issue may be fixed in a future version of the libTooling library, so there is an option, "-EnableNamespaceImport", that will reenable this feature.
 
