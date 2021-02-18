@@ -1,5 +1,5 @@
 
-This project has been superceded by [SaferCPlusPlus-AutoTranslation2](https://github.com/duneroadrunner/SaferCPlusPlus-AutoTranslation2) and remains here for posterity.
+This project has been superseded by [SaferCPlusPlus-AutoTranslation2](https://github.com/duneroadrunner/SaferCPlusPlus-AutoTranslation2) and remains here for posterity.
 
 <br/>
 <br/>
