@@ -1,3 +1,24 @@
+
+This project has been superceded by [SaferCPlusPlus-AutoTranslation2](https://github.com/duneroadrunner/SaferCPlusPlus-AutoTranslation2) and remains here for posterity.
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+-----------------------------------------------------------------------------------------------------
+
+
 Aug 2017
 
 # SaferCPlusPlus-AutoTranslation
